@@ -1,0 +1,11 @@
+# Goal
+string target_position            # WORK, GROW, INSPECT, WORK_PLANT_0..3
+---
+# Result
+bool success
+string final_position
+string message
+---
+# Feedback
+float64 progress_percent
+float64 current_position_mm

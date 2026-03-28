@@ -1,0 +1,57 @@
+name: "Italian Flat-Leaf Parsley"
+plant_id: "parsley"
+
+growth_stages:
+  seedling:
+    day_range: [0, 14]
+    ph_target: 6.0
+    ph_tolerance: 0.3
+    ec_target: 0.8
+    ec_tolerance: 0.2
+    a_b_ratio: 1.0
+    light_hours: 16
+    light_intensity_percent: 60
+  vegetative:
+    day_range: [15, 40]
+    ph_target: 6.0
+    ph_tolerance: 0.3
+    ec_target: 1.2
+    ec_tolerance: 0.3
+    a_b_ratio: 1.0
+    light_hours: 14
+    light_intensity_percent: 80
+  mature:
+    day_range: [41, 999]
+    ph_target: 6.0
+    ph_tolerance: 0.3
+    ec_target: 1.4
+    ec_tolerance: 0.3
+    a_b_ratio: 1.0
+    light_hours: 14
+    light_intensity_percent: 85
+
+light_schedule:
+  on_time: "06:00"
+  ramp_up_minutes: 30
+  ramp_down_minutes: 30
+
+deficiency_response:
+  nitrogen:    { a_b_ratio: 1.3, ec_boost: 0.2 }
+  phosphorus:  { a_b_ratio: 0.7, ec_boost: 0.1 }
+  potassium:   { a_b_ratio: 0.8, ec_boost: 0.15 }
+  iron:        { a_b_ratio: 1.0, ec_boost: 0.1 }
+
+harvest:
+  maturity_canopy_area_cm2: 80
+  min_days_between_cuts: 14
+  cut_height_mm: 50
+  max_cut_cycles: 3
+  regrow_days_expected: 14
+
+temperature:
+  target_c: 20
+  max_c: 24
+  min_c: 15
+
+water_change_interval_days: 14
+expected_yield_grams_per_cut: 15

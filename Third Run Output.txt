@@ -1,0 +1,65 @@
+C:\Users\jacks\Documents\Claude Project\ClaudroponicsProject\hydroponics_ws\src\hydroponics_dashboard\frontend>rmdir /s /q node_modules
+
+C:\Users\jacks\Documents\Claude Project\ClaudroponicsProject\hydroponics_ws\src\hydroponics_dashboard\frontend>del package-lock.json
+
+C:\Users\jacks\Documents\Claude Project\ClaudroponicsProject\hydroponics_ws\src\hydroponics_dashboard\frontend>npm install
+
+added 63 packages, and audited 64 packages in 5s
+
+7 packages are looking for funding
+  run `npm fund` for details
+
+2 moderate severity vulnerabilities
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+
+C:\Users\jacks\Documents\Claude Project\ClaudroponicsProject\hydroponics_ws\src\hydroponics_dashboard\frontend>npm audit
+# npm audit report
+
+esbuild  <=0.24.2
+Severity: moderate
+esbuild enables any website to send any requests to the development server and read the response - https://github.com/advisories/GHSA-67mh-4wv8-2f99
+fix available via `npm audit fix --force`
+Will install vite@8.0.3, which is a breaking change
+node_modules/esbuild
+  vite  0.11.0 - 6.1.6
+  Depends on vulnerable versions of esbuild
+  node_modules/vite
+
+2 moderate severity vulnerabilities
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+C:\Users\jacks\Documents\Claude Project\ClaudroponicsProject\hydroponics_ws\src\hydroponics_dashboard\frontend>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

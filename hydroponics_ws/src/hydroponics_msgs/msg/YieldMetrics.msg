@@ -1,0 +1,7 @@
+std_msgs/Header header
+float64 total_yield_grams
+float64 yield_per_watt_hour
+float64 yield_per_liter_nutrient
+float64 cost_per_gram
+uint32 total_harvests
+uint32 total_crop_cycles

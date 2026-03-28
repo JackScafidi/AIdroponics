@@ -1,0 +1,40 @@
+work_station_controller:
+  ros__parameters:
+    # Z-axis stepper calibration
+    z_steps_per_mm: 400.0       # 8mm lead screw, 2mm pitch, 200 steps, 16 microstep
+    z_max_speed_mm_s: 20.0
+    z_acceleration_mm_s2: 50.0
+    z_max_travel_mm: 200.0
+    z_min_position_mm: 0.0
+
+    # Z homing
+    z_homing_speed_mm_s: 10.0
+    z_homing_backoff_mm: 2.0
+
+    # Turret servo (MG996R)
+    turret_servo_channel: 0
+    turret_cutter_angle_deg: 0.0
+    turret_gripper_angle_deg: 180.0
+    turret_move_time_ms: 500     # Time to allow servo rotation
+
+    # Cutter servo (SG90)
+    cutter_servo_channel: 1
+    cutter_open_angle_deg: 0.0
+    cutter_close_angle_deg: 90.0
+    cutter_actuate_time_ms: 300
+
+    # Gripper servo (SG90)
+    gripper_servo_channel: 2
+    gripper_open_angle_deg: 0.0
+    gripper_close_angle_deg: 70.0
+    gripper_grip_angle_deg: 55.0  # Reduced for gentle grip
+    gripper_actuate_time_ms: 400
+
+    # Default heights
+    default_cut_height_mm: 50.0
+    grip_height_mm: 30.0
+    place_height_mm: 25.0
+    safe_z_height_mm: 180.0      # Clear height for turret rotation
+
+    # Status publish rate
+    publish_rate_hz: 10.0

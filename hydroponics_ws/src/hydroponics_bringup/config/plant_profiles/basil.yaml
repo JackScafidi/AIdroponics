@@ -1,0 +1,57 @@
+name: "Genovese Basil"
+plant_id: "basil"
+
+growth_stages:
+  seedling:
+    day_range: [0, 10]
+    ph_target: 5.8
+    ph_tolerance: 0.3
+    ec_target: 0.6
+    ec_tolerance: 0.2
+    a_b_ratio: 1.0
+    light_hours: 16
+    light_intensity_percent: 50
+  vegetative:
+    day_range: [11, 30]
+    ph_target: 5.8
+    ph_tolerance: 0.3
+    ec_target: 1.0
+    ec_tolerance: 0.3
+    a_b_ratio: 1.0
+    light_hours: 16
+    light_intensity_percent: 80
+  mature:
+    day_range: [31, 999]
+    ph_target: 5.8
+    ph_tolerance: 0.3
+    ec_target: 1.2
+    ec_tolerance: 0.3
+    a_b_ratio: 1.1
+    light_hours: 14
+    light_intensity_percent: 90
+
+light_schedule:
+  on_time: "06:00"
+  ramp_up_minutes: 20
+  ramp_down_minutes: 20
+
+deficiency_response:
+  nitrogen:    { a_b_ratio: 1.4, ec_boost: 0.2 }
+  phosphorus:  { a_b_ratio: 0.7, ec_boost: 0.1 }
+  potassium:   { a_b_ratio: 0.8, ec_boost: 0.15 }
+  iron:        { a_b_ratio: 1.0, ec_boost: 0.15 }
+
+harvest:
+  maturity_canopy_area_cm2: 100
+  min_days_between_cuts: 12
+  cut_height_mm: 60
+  max_cut_cycles: 4
+  regrow_days_expected: 10
+
+temperature:
+  target_c: 22
+  max_c: 28
+  min_c: 18
+
+water_change_interval_days: 10
+expected_yield_grams_per_cut: 20

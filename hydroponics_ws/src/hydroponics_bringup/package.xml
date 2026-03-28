@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>hydroponics_bringup</name>
+  <version>1.0.0</version>
+  <description>Launch files, URDF, and system configuration for the Claudroponics autonomous hydroponics system</description>
+  <maintainer email="developer@claudroponics.local">Claudroponics Dev</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>hydroponics_transport</exec_depend>
+  <exec_depend>hydroponics_work_station</exec_depend>
+  <exec_depend>hydroponics_vision</exec_depend>
+  <exec_depend>hydroponics_nutrients</exec_depend>
+  <exec_depend>hydroponics_lighting</exec_depend>
+  <exec_depend>hydroponics_harvest</exec_depend>
+  <exec_depend>hydroponics_data</exec_depend>
+  <exec_depend>hydroponics_bt</exec_depend>
+  <exec_depend>hydroponics_mqtt</exec_depend>
+  <exec_depend>hydroponics_dashboard</exec_depend>
+  <exec_depend>hydroponics_micro_ros_bridge</exec_depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

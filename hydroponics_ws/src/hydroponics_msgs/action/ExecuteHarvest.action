@@ -1,0 +1,12 @@
+# Goal
+HarvestPlan plan
+---
+# Result
+bool success
+HarvestResult[] results
+float64 total_weight_grams
+---
+# Feedback
+uint8 current_action_index
+uint8 total_actions
+string current_action_description

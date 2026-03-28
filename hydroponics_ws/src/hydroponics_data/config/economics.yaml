@@ -1,0 +1,29 @@
+economics:
+  ros__parameters:
+    # Energy costs
+    electricity_cost_per_kwh: 0.12    # USD
+
+    # Equipment power draw
+    grow_light_watts: 25.0
+    air_pump_watts: 4.0
+    pi_watts: 8.0
+    esp32_watts: 0.5
+
+    # Nutrient costs
+    nutrient_a_cost_per_liter: 8.00   # USD
+    nutrient_b_cost_per_liter: 8.00
+    ph_up_cost_per_liter: 5.00
+    ph_down_cost_per_liter: 5.00
+
+    # Water costs
+    water_cost_per_liter: 0.002       # USD (municipal)
+
+    # Reservoir
+    reservoir_volume_liters: 8.0
+
+    # Pump flow rate calibrations (for volume tracking)
+    pump_flow_ml_per_s:
+      ph_up: 1.0
+      ph_down: 1.0
+      nutrient_a: 1.5
+      nutrient_b: 1.5

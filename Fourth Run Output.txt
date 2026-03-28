@@ -1,0 +1,22 @@
+C:\Users\jacks\Documents\Claude Project\ClaudroponicsProject\hydroponics_ws\src\hydroponics_dashboard\frontend>npm run dev
+
+> hydroponics-dashboard@1.0.0 dev
+> vite
+
+The CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.
+
+  VITE v5.4.21  ready in 311 ms
+
+  ➜  Local:   http://localhost:3000/
+  ➜  Network: use --host to expose
+  ➜  press h + enter to show help
+8:08:52 PM [vite] warning: Duplicate key "background" in object literal
+156|                borderRadius: 0, textAlign: 'left',
+157|                color: page === item.id ? 'var(--accent-blue)' : 'var(--text-secondary)',
+158|                background: page === item.id ? 'rgba(59,130,246,0.08)' : 'none',
+   |                ^
+159|                borderLeft: page === item.id ? '2px solid var(--accent-blue)' : '2px solid transparent',
+160|                fontSize: 13
+
+  Plugin: vite:esbuild
+  File: C:/Users/jacks/Documents/Claude Project/ClaudroponicsProject/hydroponics_ws/src/hydroponics_dashboard/frontend/src/App.jsx

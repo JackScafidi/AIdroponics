@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:prototypr.io)",
+      "Bash(grep -E \"\\\\.\\(js|jsx|css|html\\)$\")",
+      "Bash(grep -E \"\\\\.\\(js|jsx|css|html|json\\)$\")",
+      "Bash(grep \"\\\\.jsx$\")",
+      "Bash(grep -E \"\\\\.\\(jpg|png|jpeg|gif|webp|bmp\\)$\")",
+      "WebSearch",
+      "WebFetch(domain:web.archive.org)",
+      "Bash(npx vite:)",
+      "Bash(npx vite:*)"
+    ]
+  }
+}

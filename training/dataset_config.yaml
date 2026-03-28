@@ -1,0 +1,52 @@
+# YOLOv8 Dataset Configuration for Claudroponics Plant Health Detection
+# Used by train_yolo.py and Ultralytics YOLO CLI
+
+path: ./data                  # root dataset directory
+train: images/train
+val: images/val
+test: images/test             # optional held-out test split
+
+# Number of classes
+nc: 8
+
+# Class names — keep this order; indices used in collect_training_data.py
+names:
+  0: healthy
+  1: mature_ready              # canopy large enough for harvest
+  2: nitrogen_deficiency       # yellowing lower leaves
+  3: calcium_deficiency        # tip burn, brown leaf edges
+  4: iron_deficiency           # interveinal chlorosis on young leaves
+  5: overwatered               # wilting + dark stems (rare in DWC but possible)
+  6: disease_suspected         # lesions, mold spots — triggers safety halt
+  7: seedling                  # small plant, not yet measurable
+
+# ─── Training hyperparameters (passed to YOLO.train()) ────────────────────────
+hyp:
+  lr0: 0.01
+  lrf: 0.01
+  momentum: 0.937
+  weight_decay: 0.0005
+  warmup_epochs: 3.0
+  warmup_momentum: 0.8
+  warmup_bias_lr: 0.1
+  box: 7.5
+  cls: 0.5
+  dfl: 1.5
+  hsv_h: 0.015
+  hsv_s: 0.7
+  hsv_v: 0.4
+  degrees: 5.0
+  translate: 0.1
+  scale: 0.3
+  shear: 0.0
+  perspective: 0.0
+  flipud: 0.0               # plants are upright, no vertical flip
+  fliplr: 0.5
+  mosaic: 1.0
+  mixup: 0.0
+  copy_paste: 0.0
+
+# ─── Augmentation notes ───────────────────────────────────────────────────────
+# Plants grow under artificial LED lighting — hue shift is the most useful aug.
+# No vertical flip (plants have polarity).
+# Perspective disabled — camera is fixed overhead + 30° side view.

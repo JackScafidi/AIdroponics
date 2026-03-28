@@ -1,0 +1,30 @@
+mqtt_bridge:
+  ros__parameters:
+    # HiveMQ Cloud broker (free tier)
+    broker_url: ""               # Set via MQTT_BROKER_URL env var
+    broker_port: 8883
+    use_tls: true
+    username: ""                 # Set via MQTT_USERNAME env var
+    password: ""                 # Set via MQTT_PASSWORD env var
+
+    # Topic prefix
+    topic_prefix: "hydroponics"
+
+    # Publish rates
+    sensor_publish_interval_s: 10.0   # 0.1 Hz for continuous data
+    event_publish_on_change: true     # Immediate for events
+
+    # Topics to bridge (ROS2 topic -> MQTT topic suffix)
+    sensor_topics:
+      - { ros_topic: "/nutrient_status", mqtt_suffix: "sensors/nutrients" }
+      - { ros_topic: "/transport_status", mqtt_suffix: "system/transport" }
+      - { ros_topic: "/light_status", mqtt_suffix: "system/lights" }
+
+    event_topics:
+      - { ros_topic: "/system_alert", mqtt_suffix: "alerts" }
+      - { ros_topic: "/harvest_result", mqtt_suffix: "harvests/latest" }
+      - { ros_topic: "/behavior_tree_status", mqtt_suffix: "system/state" }
+
+    # Home Assistant MQTT discovery
+    ha_discovery_enabled: true
+    ha_discovery_prefix: "homeassistant"

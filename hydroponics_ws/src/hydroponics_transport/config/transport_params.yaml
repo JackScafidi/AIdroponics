@@ -1,0 +1,33 @@
+transport_controller:
+  ros__parameters:
+    # Stepper calibration
+    steps_per_mm: 80.0          # GT2 belt: 20-tooth pulley, 200-step motor, 16 microstep = 80 steps/mm
+    max_speed_mm_s: 50.0        # Conservative to prevent sloshing
+    acceleration_mm_s2: 100.0   # Soft ramp
+    deceleration_mm_s2: 100.0
+
+    # Named positions (mm from home limit switch)
+    positions:
+      WORK: 50.0
+      WORK_PLANT_0: 50.0
+      WORK_PLANT_1: 177.0       # 50 + 127 (5")
+      WORK_PLANT_2: 304.0       # 50 + 254
+      WORK_PLANT_3: 431.0       # 50 + 381
+      GROW: 500.0               # Center of grow channel
+      INSPECT: 1050.0           # Near end of rail
+
+    # Travel limits
+    min_position_mm: 0.0
+    max_position_mm: 1100.0
+
+    # Homing
+    homing_speed_mm_s: 20.0
+    homing_backoff_mm: 5.0
+    home_direction: -1           # -1 = toward limit switch
+
+    # TMC2209 StallGuard (optional)
+    stallguard_enabled: false
+    stallguard_threshold: 50
+
+    # Status publish rate
+    publish_rate_hz: 10.0

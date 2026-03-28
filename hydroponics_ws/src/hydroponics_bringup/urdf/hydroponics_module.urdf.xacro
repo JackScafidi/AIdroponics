@@ -1,0 +1,311 @@
+<?xml version="1.0"?>
+<!--
+  hydroponics_module.urdf.xacro
+  URDF/xacro description of the Claudroponics prototype module for RViz2
+  visualization and collision checking.
+
+  MIT License — Copyright (c) 2026 Claudroponics
+
+  Coordinate frame: right-hand, Z-up, origin at rail home end at floor level.
+    +X = direction of positive rail travel (toward inspection station)
+    +Y = into the grow channel (toward the wall)
+    +Z = up
+-->
+<robot name="hydroponics_module" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- ====================================================================
+       Properties
+       ==================================================================== -->
+  <!-- Physical dimensions (meters) -->
+  <xacro:property name="rail_length"          value="1.2"/>   <!-- ~4 ft rod length -->
+  <xacro:property name="frame_depth"          value="0.30"/>  <!-- Y depth of base -->
+  <xacro:property name="frame_height"         value="0.05"/>  <!-- base board thickness -->
+
+  <xacro:property name="grow_channel_length"  value="0.70"/>
+  <xacro:property name="grow_channel_width"   value="0.22"/>
+  <xacro:property name="grow_channel_height"  value="0.15"/>
+  <xacro:property name="grow_channel_x"       value="0.30"/>  <!-- offset from rail home -->
+
+  <xacro:property name="carriage_length"      value="0.12"/>
+  <xacro:property name="carriage_width"       value="0.16"/>
+  <xacro:property name="carriage_height"      value="0.025"/>
+  <xacro:property name="carriage_z"           value="0.08"/>  <!-- height above base -->
+
+  <xacro:property name="work_station_x"       value="0.05"/>  <!-- near rail home -->
+  <xacro:property name="work_station_width"   value="0.12"/>
+  <xacro:property name="work_station_depth"   value="0.20"/>
+  <xacro:property name="work_station_height"  value="0.55"/>
+
+  <xacro:property name="z_carriage_size"      value="0.08"/>
+  <xacro:property name="z_travel"             value="0.20"/>
+
+  <xacro:property name="inspection_x"         value="1.05"/>  <!-- near rail end -->
+  <xacro:property name="inspection_width"     value="0.14"/>
+  <xacro:property name="inspection_depth"     value="0.22"/>
+  <xacro:property name="inspection_height"    value="0.40"/>
+
+  <xacro:property name="camera_size"          value="0.03"/>
+
+  <!-- ====================================================================
+       Materials
+       ==================================================================== -->
+  <material name="grey">
+    <color rgba="0.5 0.5 0.5 1.0"/>
+  </material>
+  <material name="dark_grey">
+    <color rgba="0.25 0.25 0.25 1.0"/>
+  </material>
+  <material name="silver">
+    <color rgba="0.8 0.8 0.85 1.0"/>
+  </material>
+  <material name="orange">
+    <color rgba="1.0 0.5 0.0 1.0"/>
+  </material>
+  <material name="blue_dark">
+    <color rgba="0.05 0.1 0.3 1.0"/>
+  </material>
+  <material name="red">
+    <color rgba="0.8 0.1 0.1 1.0"/>
+  </material>
+  <material name="black">
+    <color rgba="0.05 0.05 0.05 1.0"/>
+  </material>
+  <material name="green">
+    <color rgba="0.1 0.7 0.1 1.0"/>
+  </material>
+
+  <!-- ====================================================================
+       BASE LINK (lumber frame base)
+       ==================================================================== -->
+  <link name="base_link">
+    <visual>
+      <origin xyz="${rail_length/2} ${frame_depth/2} ${frame_height/2}" rpy="0 0 0"/>
+      <geometry>
+        <box size="${rail_length + 0.2} ${frame_depth} ${frame_height}"/>
+      </geometry>
+      <material name="grey"/>
+    </visual>
+    <collision>
+      <origin xyz="${rail_length/2} ${frame_depth/2} ${frame_height/2}" rpy="0 0 0"/>
+      <geometry>
+        <box size="${rail_length + 0.2} ${frame_depth} ${frame_height}"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="5.0"/>
+      <inertia ixx="0.1" ixy="0" ixz="0" iyy="0.5" iyz="0" izz="0.5"/>
+    </inertial>
+  </link>
+
+  <!-- ====================================================================
+       RAIL LINK (the two smooth rods — represented as a single visual)
+       ==================================================================== -->
+  <link name="rail_link">
+    <visual>
+      <origin xyz="${rail_length/2} 0.04 0" rpy="0 ${pi/2} 0"/>
+      <geometry>
+        <cylinder radius="0.004" length="${rail_length}"/>
+      </geometry>
+      <material name="silver"/>
+    </visual>
+    <visual>
+      <origin xyz="${rail_length/2} 0.12 0" rpy="0 ${pi/2} 0"/>
+      <geometry>
+        <cylinder radius="0.004" length="${rail_length}"/>
+      </geometry>
+      <material name="silver"/>
+    </visual>
+    <inertial>
+      <mass value="0.5"/>
+      <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.01" iyz="0" izz="0.01"/>
+    </inertial>
+  </link>
+
+  <joint name="rail_joint" type="fixed">
+    <parent link="base_link"/>
+    <child  link="rail_link"/>
+    <origin xyz="0 0.04 ${carriage_z}" rpy="0 0 0"/>
+  </joint>
+
+  <!-- ====================================================================
+       CARRIAGE LINK (tray holder — slides along rail)
+       ==================================================================== -->
+  <link name="carriage_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="${carriage_length} ${carriage_width} ${carriage_height}"/>
+      </geometry>
+      <material name="orange"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="${carriage_length} ${carriage_width} ${carriage_height}"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.3"/>
+      <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
+    </inertial>
+  </link>
+
+  <!-- Prismatic joint — carriage slides along X (rail axis) -->
+  <joint name="carriage_joint" type="prismatic">
+    <parent link="rail_link"/>
+    <child  link="carriage_link"/>
+    <origin xyz="0 0.04 0" rpy="0 0 0"/>
+    <axis   xyz="1 0 0"/>
+    <limit  lower="0" upper="${rail_length}" effort="20" velocity="0.1"/>
+  </joint>
+
+  <!-- ====================================================================
+       GROW CHANNEL LINK (the DWC tote)
+       ==================================================================== -->
+  <link name="grow_channel_link">
+    <visual>
+      <origin xyz="${grow_channel_length/2} ${grow_channel_width/2} ${grow_channel_height/2}"
+              rpy="0 0 0"/>
+      <geometry>
+        <box size="${grow_channel_length} ${grow_channel_width} ${grow_channel_height}"/>
+      </geometry>
+      <material name="blue_dark"/>
+    </visual>
+    <collision>
+      <origin xyz="${grow_channel_length/2} ${grow_channel_width/2} ${grow_channel_height/2}"
+              rpy="0 0 0"/>
+      <geometry>
+        <box size="${grow_channel_length} ${grow_channel_width} ${grow_channel_height}"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="3.0"/>
+      <inertia ixx="0.05" ixy="0" ixz="0" iyy="0.1" iyz="0" izz="0.1"/>
+    </inertial>
+  </link>
+
+  <joint name="grow_channel_joint" type="fixed">
+    <parent link="base_link"/>
+    <child  link="grow_channel_link"/>
+    <origin xyz="${grow_channel_x} 0.04 ${frame_height}" rpy="0 0 0"/>
+  </joint>
+
+  <!-- ====================================================================
+       WORK STATION LINK (frame + Z column)
+       ==================================================================== -->
+  <link name="work_station_link">
+    <visual>
+      <origin xyz="${work_station_width/2} ${work_station_depth/2} ${work_station_height/2}"
+              rpy="0 0 0"/>
+      <geometry>
+        <box size="${work_station_width} ${work_station_depth} ${work_station_height}"/>
+      </geometry>
+      <material name="dark_grey"/>
+    </visual>
+    <inertial>
+      <mass value="2.0"/>
+      <inertia ixx="0.05" ixy="0" ixz="0" iyy="0.05" iyz="0" izz="0.02"/>
+    </inertial>
+  </link>
+
+  <joint name="work_station_joint" type="fixed">
+    <parent link="base_link"/>
+    <child  link="work_station_link"/>
+    <origin xyz="${work_station_x} 0.04 ${frame_height}" rpy="0 0 0"/>
+  </joint>
+
+  <!-- Z carriage (tool head — slides up/down on work station) -->
+  <link name="work_station_z_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="${z_carriage_size} ${z_carriage_size} ${z_carriage_size}"/>
+      </geometry>
+      <material name="red"/>
+    </visual>
+    <inertial>
+      <mass value="0.2"/>
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+    </inertial>
+  </link>
+
+  <joint name="work_station_z_joint" type="prismatic">
+    <parent link="work_station_link"/>
+    <child  link="work_station_z_link"/>
+    <origin xyz="${work_station_width/2} ${work_station_depth/2} ${work_station_height * 0.7}"
+            rpy="0 0 0"/>
+    <axis   xyz="0 0 1"/>
+    <limit  lower="${-z_travel}" upper="0" effort="10" velocity="0.05"/>
+  </joint>
+
+  <!-- ====================================================================
+       INSPECTION STATION LINK
+       ==================================================================== -->
+  <link name="inspection_station_link">
+    <visual>
+      <origin xyz="${inspection_width/2} ${inspection_depth/2} ${inspection_height/2}"
+              rpy="0 0 0"/>
+      <geometry>
+        <box size="${inspection_width} ${inspection_depth} ${inspection_height}"/>
+      </geometry>
+      <material name="dark_grey"/>
+    </visual>
+    <inertial>
+      <mass value="1.5"/>
+      <inertia ixx="0.03" ixy="0" ixz="0" iyy="0.03" iyz="0" izz="0.01"/>
+    </inertial>
+  </link>
+
+  <joint name="inspection_station_joint" type="fixed">
+    <parent link="base_link"/>
+    <child  link="inspection_station_link"/>
+    <origin xyz="${inspection_x} 0.04 ${frame_height}" rpy="0 0 0"/>
+  </joint>
+
+  <!-- Camera 1 — overhead -->
+  <link name="camera1_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="${camera_size} ${camera_size} ${camera_size}"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+    <inertial>
+      <mass value="0.1"/>
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+    </inertial>
+  </link>
+
+  <joint name="camera1_joint" type="fixed">
+    <parent link="inspection_station_link"/>
+    <child  link="camera1_link"/>
+    <!-- Mounted overhead, pointing straight down -->
+    <origin xyz="${inspection_width/2} ${inspection_depth/2} ${inspection_height}"
+            rpy="0 ${pi/2} 0"/>
+  </joint>
+
+  <!-- Camera 2 — side angle (30° from horizontal) -->
+  <link name="camera2_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="${camera_size} ${camera_size} ${camera_size}"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+    <inertial>
+      <mass value="0.1"/>
+      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>
+    </inertial>
+  </link>
+
+  <joint name="camera2_joint" type="fixed">
+    <parent link="inspection_station_link"/>
+    <child  link="camera2_link"/>
+    <!-- Mounted at side, 30° downward angle -->
+    <origin xyz="${inspection_width + 0.05} ${inspection_depth/2} ${inspection_height * 0.7}"
+            rpy="0 ${-pi/6} 0"/>
+  </joint>
+
+</robot>

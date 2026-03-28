@@ -1,0 +1,25 @@
+C:\Users\jacks\Documents\Claude Project\ClaudroponicsProject\hydroponics_ws\src\hydroponics_dashboard\frontend>npm install
+npm error code ERESOLVE
+npm error ERESOLVE unable to resolve dependency tree
+npm error
+npm error While resolving: hydroponics-dashboard@1.0.0
+npm error Found: vite@8.0.3
+npm error node_modules/vite
+npm error   dev vite@"^8.0.3" from the root project
+npm error   peer vite@"*" from @vitejs/devtools@0.1.11
+npm error   node_modules/@vitejs/devtools
+npm error     peerOptional @vitejs/devtools@"^0.1.0" from vite@8.0.3
+npm error
+npm error Could not resolve dependency:
+npm error peer vite@"^6.3.0" from @vitejs/plugin-react-oxc@0.1.1
+npm error node_modules/@vitejs/plugin-react-oxc
+npm error   dev @vitejs/plugin-react-oxc@"^0.1.0" from the root project
+npm error
+npm error Fix the upstream dependency conflict, or retry
+npm error this command with --force or --legacy-peer-deps
+npm error to accept an incorrect (and potentially broken) dependency resolution.
+npm error
+npm error
+npm error For a full report see:
+npm error C:\Users\jacks\AppData\Local\npm-cache\_logs\2026-03-27T00_05_38_104Z-eresolve-report.txt
+npm error A complete log of this run can be found in: C:\Users\jacks\AppData\Local\npm-cache\_logs\2026-03-27T00_05_38_104Z-debug-0.log

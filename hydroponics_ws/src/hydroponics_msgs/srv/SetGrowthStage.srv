@@ -1,0 +1,4 @@
+string stage                      # seedling, vegetative, mature
+---
+bool success
+string previous_stage

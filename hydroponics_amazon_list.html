@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;500;600;700&display=swap');
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #0D1117; color: #E6EDF3; font-family: 'Inter', sans-serif; padding: 24px; max-width: 1100px; margin: 0 auto; }
+h1 { font-family: 'JetBrains Mono', monospace; font-size: 22px; margin-bottom: 4px; }
+.subtitle { color: #8B949E; font-size: 13px; margin-bottom: 24px; }
+.badge { display: inline-block; background: #1A3A2A; color: #3FB950; padding: 3px 10px; border-radius: 4px; font-size: 12px; font-weight: 600; margin-left: 8px; }
+.section { margin-bottom: 28px; }
+.section-header { background: #161B22; padding: 10px 16px; border-radius: 8px 8px 0 0; border: 1px solid #30363D; border-bottom: none; display: flex; align-items: center; gap: 10px; }
+.section-title { font-weight: 700; font-size: 14px; color: #58A6FF; }
+.section-cost { margin-left: auto; color: #3FB950; font-weight: 600; font-size: 13px; font-family: 'JetBrains Mono', monospace; }
+table { width: 100%; border-collapse: collapse; border: 1px solid #30363D; border-top: none; }
+th { background: #1C2230; color: #8B949E; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; padding: 8px 12px; text-align: left; border-bottom: 1px solid #30363D; }
+th:nth-child(3), th:nth-child(4), th:nth-child(5) { text-align: center; }
+td { padding: 10px 12px; font-size: 13px; border-bottom: 1px solid #21262D; vertical-align: top; }
+td:nth-child(3), td:nth-child(4), td:nth-child(5) { text-align: center; font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+tr:nth-child(even) { background: #161B22; }
+tr:hover { background: #1C2230; }
+a { color: #58A6FF; text-decoration: none; }
+a:hover { text-decoration: underline; }
+.note { color: #8B949E; font-size: 11px; display: block; margin-top: 3px; }
+.search-link { font-size: 11px; color: #8B949E; }
+.total-row { background: #1A3A2A !important; }
+.total-row td { color: #3FB950; font-weight: 700; font-size: 14px; border: none; padding: 14px 12px; }
+.footer { margin-top: 32px; padding: 16px; background: #161B22; border-radius: 8px; border: 1px solid #30363D; }
+.footer p { color: #8B949E; font-size: 12px; margin-bottom: 6px; }
+.footer strong { color: #E6EDF3; }
+.tip { background: #2D1F4E; border: 1px solid #6E40C9; border-radius: 6px; padding: 10px 14px; margin-bottom: 20px; font-size: 12px; color: #BC8CFF; }
+</style>
+</head>
+<body>
+
+<h1>HYDROPONICS FARM — AMAZON SHOPPING LIST <span class="badge">~$374</span></h1>
+<p class="subtitle">Every purchasable component with direct Amazon links. 3D printed parts not included ($0). Prices approximate — check at time of purchase.</p>
+
+<div class="tip">💡 <strong>Tip:</strong> Add all items to a single Amazon list to track total cost. Some items come in multi-packs (e.g., TMC2209 2-pack, ESP32 2-pack) — you'll have spares, which is useful for prototyping. Search links provided where exact product may vary.</div>
+
+<div class="section">
+<div class="section-header">
+  <span class="section-title">⚡ COMPUTE & ELECTRONICS</span>
+  <span class="section-cost">~$164</span>
+</div>
+<table>
+<tr><th>Item</th><th>Amazon Link</th><th>Qty</th><th>Est. Price</th><th>Subtotal</th></tr>
+<tr>
+  <td><strong>Raspberry Pi 5 (8GB)</strong><span class="note">Main compute. Get board only — you don't need a kit (you'll mount it in your own enclosure)</span></td>
+  <td><a href="https://www.amazon.com/Raspberry-Pi-8GB-SC1112-Quad-core/dp/B0CK2FCG1K" target="_blank">Raspberry Pi 5 8GB Board</a></td>
+  <td>1</td><td>$80</td><td>$80</td>
+</tr>
+<tr>
+  <td><strong>ESP32 DevKit V1 (CP2102, 2-pack)</strong><span class="note">MCU for all hardware I/O. 2-pack gives you a spare. 30-pin or 38-pin both work</span></td>
+  <td><a href="https://www.amazon.com/ESP32-WROOM-32-Development-ESP-32S-Bluetooth-forArduino/dp/B08PCPJ12M" target="_blank">DIYmall ESP32 DevKit V1 2-Pack</a></td>
+  <td>1 pack</td><td>$10</td><td>$10</td>
+</tr>
+<tr>
+  <td><strong>TMC2209 V1.3 Stepper Drivers (2-pack)</strong><span class="note">BIGTREETECH. One for rail axis, one for Z axis. UART + StallGuard support</span></td>
+  <td><a href="https://www.amazon.com/BIGTREETECH-TMC2209-Stepper-Driver-Printer/dp/B08C2DJQ6B" target="_blank">BIGTREETECH TMC2209 V1.3 2-Pack</a></td>
+  <td>1 pack</td><td>$16</td><td>$16</td>
+</tr>
+<tr>
+  <td><strong>MicroSD Card (64GB, A2)</strong><span class="note">Samsung EVO Select or SanDisk Extreme. A2 rating for faster random I/O on Pi</span></td>
+  <td><a href="https://www.amazon.com/s?k=64gb+microsd+a2+samsung+evo" target="_blank">Search: 64GB MicroSD A2</a></td>
+  <td>1</td><td>$10</td><td>$10</td>
+</tr>
+<tr>
+  <td><strong>USB-C Power Supply 5V 5A (Pi 5)</strong><span class="note">Must be 27W / 5.1V 5A for Pi 5. Official Raspberry Pi PSU or equivalent</span></td>
+  <td><a href="https://www.amazon.com/s?k=raspberry+pi+5+power+supply+27w+5a" target="_blank">Search: Pi 5 27W PSU</a></td>
+  <td>1</td><td>$15</td><td>$15</td>
+</tr>
+<tr>
+  <td><strong>24V 4A Power Supply</strong><span class="note">Powers steppers, pumps, grow LED. Mean Well or generic switching PSU. Barrel jack or screw terminal</span></td>
+  <td><a href="https://www.amazon.com/s?k=24v+4a+power+supply+switching" target="_blank">Search: 24V 4A Switching PSU</a></td>
+  <td>1</td><td>$18</td><td>$18</td>
+</tr>
+<tr>
+  <td><strong>Buck Converter 24V→5V (5A)</strong><span class="note">Powers servos + ESP32 logic. LM2596 or MP1584 module. Adjustable output, set to 5V</span></td>
+  <td><a href="https://www.amazon.com/s?k=lm2596+buck+converter+5a" target="_blank">Search: LM2596 Buck 5A</a></td>
+  <td>1</td><td>$8</td><td>$8</td>
+</tr>
+<tr>
+  <td><strong>MOSFET Module Pack (IRF520 or IRLZ44N, 5-pack)</strong><span class="note">Switches pumps, grow LED, inspection LED. Logic-level gate. Get a 5-pack</span></td>
+  <td><a href="https://www.amazon.com/s?k=irf520+mosfet+module+5+pack" target="_blank">Search: IRF520 MOSFET Module 5-Pack</a></td>
+  <td>1 pack</td><td>$7</td><td>$7</td>
+</tr>
+</table>
+</div>
+
+<div class="section">
+<div class="section-header">
+  <span class="section-title">🚃 RAIL TRANSPORT</span>
+  <span class="section-cost">~$62</span>
+</div>
+<table>
+<tr><th>Item</th><th>Amazon Link</th><th>Qty</th><th>Est. Price</th><th>Subtotal</th></tr>
+<tr>
+  <td><strong>NEMA 17 Stepper Motor (40mm, 1.8°)</strong><span class="note">Rail drive. 1.5A–2A rated. 4-wire bipolar. Get a 2+ pack to also cover Z axis</span></td>
+  <td><a href="https://www.amazon.com/s?k=nema+17+stepper+motor+42mm+2+pack" target="_blank">Search: NEMA 17 Stepper 2-Pack</a></td>
+  <td>1 pack (2)</td><td>$20</td><td>$20</td>
+</tr>
+<tr>
+  <td><strong>8mm Smooth Rod 500mm (4-pack)</strong><span class="note">Cut to 2×1200mm for rail (or buy 2× 1200mm rods) + 2×250mm for Z axis. 500mm rods can be paired for the rail if needed</span></td>
+  <td><a href="https://www.amazon.com/s?k=8mm+linear+shaft+rod+500mm" target="_blank">Search: 8mm Linear Rod 500mm</a></td>
+  <td>1 pack</td><td>$16</td><td>$16</td>
+</tr>
+<tr>
+  <td><strong>LM8UU Linear Bearings (8-pack)</strong><span class="note">4 for rail carriage + 2 for Z axis + 2 spare. Press-fit into 3D printed carriage plates</span></td>
+  <td><a href="https://www.amazon.com/s?k=lm8uu+linear+bearing+8+pack" target="_blank">Search: LM8UU 8-Pack</a></td>
+  <td>1 pack</td><td>$8</td><td>$8</td>
+</tr>
+<tr>
+  <td><strong>GT2 Timing Belt (6mm, 5m) + Pulleys Kit</strong><span class="note">Many kits include belt + 20-tooth pulleys + idlers. Get a kit with at least 2 pulleys + 2 idlers + 5m belt</span></td>
+  <td><a href="https://www.amazon.com/s?k=gt2+timing+belt+pulley+kit+6mm+5m" target="_blank">Search: GT2 Belt + Pulley Kit</a></td>
+  <td>1 kit</td><td>$12</td><td>$12</td>
+</tr>
+<tr>
+  <td><strong>Micro Limit Switches (10-pack)</strong><span class="note">3 needed (rail home, rail end, Z home) + spares. Lever-type, 3-pin</span></td>
+  <td><a href="https://www.amazon.com/s?k=micro+limit+switch+lever+10+pack" target="_blank">Search: Micro Limit Switch 10-Pack</a></td>
+  <td>1 pack</td><td>$6</td><td>$6</td>
+</tr>
+</table>
+</div>
+
+<div class="section">
+<div class="section-header">
+  <span class="section-title">🔧 WORK STATION</span>
+  <span class="section-cost">~$31</span>
+</div>
+<table>
+<tr><th>Item</th><th>Amazon Link</th><th>Qty</th><th>Est. Price</th><th>Subtotal</th></tr>
+<tr>
+  <td><strong>8mm Lead Screw 250mm + Nut</strong><span class="note">T8 lead screw, 2mm pitch. Most kits include the brass nut. Anti-backlash nut preferred if available</span></td>
+  <td><a href="https://www.amazon.com/s?k=t8+lead+screw+250mm+2mm+pitch+nut" target="_blank">Search: T8 Lead Screw 250mm</a></td>
+  <td>1</td><td>$9</td><td>$9</td>
+</tr>
+<tr>
+  <td><strong>Flexible Shaft Coupler 5mm→8mm</strong><span class="note">Connects NEMA 17 shaft (5mm) to lead screw (8mm)</span></td>
+  <td><a href="https://www.amazon.com/s?k=flexible+shaft+coupler+5mm+8mm" target="_blank">Search: 5mm to 8mm Coupler</a></td>
+  <td>1</td><td>$4</td><td>$4</td>
+</tr>
+<tr>
+  <td><strong>MG996R Servo Motor</strong><span class="note">Turret rotation. High-torque metal gear servo. ~180° range</span></td>
+  <td><a href="https://www.amazon.com/s?k=mg996r+servo+motor" target="_blank">Search: MG996R Servo</a></td>
+  <td>1</td><td>$8</td><td>$8</td>
+</tr>
+<tr>
+  <td><strong>SG90 Micro Servo (5-pack)</strong><span class="note">2 needed (cutter blade + gripper). 5-pack gives spares for testing</span></td>
+  <td><a href="https://www.amazon.com/s?k=sg90+micro+servo+5+pack" target="_blank">Search: SG90 Servo 5-Pack</a></td>
+  <td>1 pack</td><td>$10</td><td>$10</td>
+</tr>
+</table>
+</div>
+
+<div class="section">
+<div class="section-header">
+  <span class="section-title">📷 INSPECTION STATION</span>
+  <span class="section-cost">~$35</span>
+</div>
+<table>
+<tr><th>Item</th><th>Amazon Link</th><th>Qty</th><th>Est. Price</th><th>Subtotal</th></tr>
+<tr>
+  <td><strong>USB Webcam 1080p (manual focus preferred)</strong><span class="note">2 needed. Matching model preferred for consistent color. Budget 1080p webcams work fine — lock focus manually in software</span></td>
+  <td><a href="https://www.amazon.com/s?k=1080p+usb+webcam+manual+focus" target="_blank">Search: 1080p USB Webcam</a></td>
+  <td>2</td><td>$13 ea</td><td>$26</td>
+</tr>
+<tr>
+  <td><strong>LED Strip 5000K White (12V, 1m)</strong><span class="note">Cut to ~0.5m for inspection station. Daylight white for accurate plant color imaging</span></td>
+  <td><a href="https://www.amazon.com/s?k=5000k+white+led+strip+12v+1m" target="_blank">Search: 5000K LED Strip 12V</a></td>
+  <td>1</td><td>$7</td><td>$7</td>
+</tr>
+<tr>
+  <td><strong>Silicone Sheet 1mm (for gripper pads)</strong><span class="note">Small piece. Cut 10×40mm pads for gripper jaw faces. CA glue to attach</span></td>
+  <td><a href="https://www.amazon.com/s?k=1mm+silicone+rubber+sheet+small" target="_blank">Search: 1mm Silicone Sheet</a></td>
+  <td>1</td><td>$5</td><td>$2</td>
+</tr>
+</table>
+</div>
+
+<div class="section">
+<div class="section-header">
+  <span class="section-title">🌱 DWC GROW CHANNEL</span>
+  <span class="section-cost">~$46</span>
+</div>
+<table>
+<tr><th>Item</th><th>Amazon Link</th><th>Qty</th><th>Est. Price</th><th>Subtotal</th></tr>
+<tr>
+  <td><strong>Black Plastic Storage Tote (~6qt, 24"×8" ish)</strong><span class="note">DWC reservoir. Must be black or spray-paint it to block light (algae). Measure internal dims before buying</span></td>
+  <td><a href="https://www.amazon.com/s?k=black+plastic+storage+bin+small+6+quart" target="_blank">Search: Black Storage Tote ~6qt</a></td>
+  <td>1</td><td>$5</td><td>$5</td>
+</tr>
+<tr>
+  <td><strong>Net Pots 2" (25-pack)</strong><span class="note">4 in tray + extras in seedling rack. Heavy mesh, slotted</span></td>
+  <td><a href="https://www.amazon.com/s?k=2+inch+net+pots+hydroponic+25+pack" target="_blank">Search: 2" Net Pots 25-Pack</a></td>
+  <td>1 pack</td><td>$7</td><td>$7</td>
+</tr>
+<tr>
+  <td><strong>Rockwool Cubes 1.5" (sheet/pack)</strong><span class="note">Seed starting medium. Sits inside net pot</span></td>
+  <td><a href="https://www.amazon.com/s?k=rockwool+cubes+1.5+inch+hydroponic" target="_blank">Search: 1.5" Rockwool Cubes</a></td>
+  <td>1 pack</td><td>$7</td><td>$7</td>
+</tr>
+<tr>
+  <td><strong>Clay Pebbles / Hydroton (2L bag)</strong><span class="note">Fills net pot around rockwool. Provides aeration and root support</span></td>
+  <td><a href="https://www.amazon.com/s?k=clay+pebbles+hydroton+2+liter" target="_blank">Search: Clay Pebbles 2L</a></td>
+  <td>1</td><td>$8</td><td>$8</td>
+</tr>
+<tr>
+  <td><strong>Air Pump (adjustable, 2–4 LPM) + Airline Kit</strong><span class="note">Many kits include pump + tubing + air stone + check valve</span></td>
+  <td><a href="https://www.amazon.com/s?k=aquarium+air+pump+kit+air+stone+tubing" target="_blank">Search: Air Pump Kit with Stone + Tubing</a></td>
+  <td>1 kit</td><td>$14</td><td>$14</td>
+</tr>
+<tr>
+  <td><strong>LED Grow Panel (25W, full spectrum)</strong><span class="note">Full spectrum for herbs. Must be dimmable or controllable via the MOSFET PWM</span></td>
+  <td><a href="https://www.amazon.com/s?k=led+grow+light+panel+25w+full+spectrum" target="_blank">Search: 25W Grow Light Panel</a></td>
+  <td>1</td><td>$20</td><td>$20</td>
+</tr>
+</table>
+</div>
+
+<div class="section">
+<div class="section-header">
+  <span class="section-title">🧪 NUTRIENT SYSTEM & SENSORS</span>
+  <span class="section-cost">~$148</span>
+</div>
+<table>
+<tr><th>Item</th><th>Amazon Link</th><th>Qty</th><th>Est. Price</th><th>Subtotal</th></tr>
+<tr>
+  <td><strong>Peristaltic Dosing Pump 12V (4-pack or 4×singles)</strong><span class="note">4 needed: pH up, pH down, Nutrient A, Nutrient B. ~1-3 mL/min flow rate typical</span></td>
+  <td><a href="https://www.amazon.com/s?k=peristaltic+pump+12v+dosing+arduino" target="_blank">Search: 12V Peristaltic Pump</a></td>
+  <td>4</td><td>$8 ea</td><td>$32</td>
+</tr>
+<tr>
+  <td><strong>Silicone Tubing 4mm ID (2m × 2)</strong><span class="note">Connects pump inlets to bottles, outlets to reservoir</span></td>
+  <td><a href="https://www.amazon.com/s?k=4mm+id+silicone+tubing+2m" target="_blank">Search: 4mm Silicone Tubing</a></td>
+  <td>2</td><td>$4 ea</td><td>$8</td>
+</tr>
+<tr>
+  <td><strong>DFRobot Gravity Analog pH Sensor Kit</strong><span class="note">Includes probe + signal board + BNC connector. Well-documented Arduino/ESP32 library</span></td>
+  <td><a href="https://www.amazon.com/s?k=dfrobot+gravity+analog+pH+sensor+kit" target="_blank">Search: DFRobot Gravity pH Sensor</a></td>
+  <td>1</td><td>$30</td><td>$30</td>
+</tr>
+<tr>
+  <td><strong>DFRobot Gravity Analog EC Sensor Kit</strong><span class="note">Includes probe + signal board. Measures electrical conductivity (nutrient concentration)</span></td>
+  <td><a href="https://www.amazon.com/s?k=dfrobot+gravity+analog+EC+TDS+sensor+kit" target="_blank">Search: DFRobot Gravity EC Sensor</a></td>
+  <td>1</td><td>$35</td><td>$35</td>
+</tr>
+<tr>
+  <td><strong>DS18B20 Waterproof Temperature Probe (3-pack)</strong><span class="note">OneWire digital temp sensor. Stainless probe. 1 for reservoir, 2 spare</span></td>
+  <td><a href="https://www.amazon.com/s?k=ds18b20+waterproof+temperature+sensor+3+pack" target="_blank">Search: DS18B20 Waterproof 3-Pack</a></td>
+  <td>1 pack</td><td>$7</td><td>$7</td>
+</tr>
+<tr>
+  <td><strong>Float Switch (vertical mount)</strong><span class="note">Water level detection. NC wiring. Triggers when water drops below threshold</span></td>
+  <td><a href="https://www.amazon.com/s?k=vertical+float+switch+water+level+sensor" target="_blank">Search: Vertical Float Switch</a></td>
+  <td>1</td><td>$5</td><td>$5</td>
+</tr>
+<tr>
+  <td><strong>HX711 Load Cell Amplifier + 1kg Beam Cell</strong><span class="note">Weighs harvested foliage. Many kits include both HX711 board + load cell</span></td>
+  <td><a href="https://www.amazon.com/s?k=hx711+load+cell+1kg+kit" target="_blank">Search: HX711 + 1kg Load Cell Kit</a></td>
+  <td>1 kit</td><td>$8</td><td>$8</td>
+</tr>
+<tr>
+  <td><strong>pH Up Solution (250mL)</strong><span class="note">General Hydroponics or similar. Potassium hydroxide based</span></td>
+  <td><a href="https://www.amazon.com/s?k=general+hydroponics+ph+up+8+oz" target="_blank">Search: pH Up Solution</a></td>
+  <td>1</td><td>$8</td><td>$8</td>
+</tr>
+<tr>
+  <td><strong>pH Down Solution (250mL)</strong><span class="note">General Hydroponics or similar. Phosphoric acid based</span></td>
+  <td><a href="https://www.amazon.com/s?k=general+hydroponics+ph+down+8+oz" target="_blank">Search: pH Down Solution</a></td>
+  <td>1</td><td>$8</td><td>$8</td>
+</tr>
+<tr>
+  <td><strong>Hydroponic Nutrient A+B (2-part, 1L total)</strong><span class="note">General Hydroponics Flora Series (Micro+Bloom for herbs) or similar 2-part system</span></td>
+  <td><a href="https://www.amazon.com/s?k=general+hydroponics+flora+micro+bloom" target="_blank">Search: GH Flora Nutrients</a></td>
+  <td>1 set</td><td>$20</td><td>$20</td>
+</tr>
+</table>
+</div>
+
+<div class="section">
+<div class="section-header">
+  <span class="section-title">🔌 WIRING & HARDWARE</span>
+  <span class="section-cost">~$47</span>
+</div>
+<table>
+<tr><th>Item</th><th>Amazon Link</th><th>Qty</th><th>Est. Price</th><th>Subtotal</th></tr>
+<tr>
+  <td><strong>22AWG Silicone Wire Kit (5 colors, 10m each)</strong><span class="note">Signal wiring for all sensors, limit switches, servos. Flexible, heat-resistant</span></td>
+  <td><a href="https://www.amazon.com/s?k=22awg+silicone+wire+kit+5+colors" target="_blank">Search: 22AWG Silicone Wire Kit</a></td>
+  <td>1</td><td>$12</td><td>$12</td>
+</tr>
+<tr>
+  <td><strong>18AWG Wire (red + black, 5m each)</strong><span class="note">Power wiring for motors, pumps, LED panel</span></td>
+  <td><a href="https://www.amazon.com/s?k=18awg+wire+red+black+silicone" target="_blank">Search: 18AWG Power Wire</a></td>
+  <td>1</td><td>$8</td><td>$8</td>
+</tr>
+<tr>
+  <td><strong>JST-XH Connector Kit</strong><span class="note">Crimp connectors for motors, sensors. 2.54mm pitch. Get a kit with housings + pins + crimper</span></td>
+  <td><a href="https://www.amazon.com/s?k=jst+xh+connector+kit+2.54mm" target="_blank">Search: JST-XH Connector Kit</a></td>
+  <td>1</td><td>$10</td><td>$10</td>
+</tr>
+<tr>
+  <td><strong>Heat Shrink Tubing Kit</strong><span class="note">Assorted sizes for wire connections and insulation</span></td>
+  <td><a href="https://www.amazon.com/s?k=heat+shrink+tubing+kit+assorted" target="_blank">Search: Heat Shrink Kit</a></td>
+  <td>1</td><td>$5</td><td>$5</td>
+</tr>
+<tr>
+  <td><strong>Dupont Jumper Wires (M-F, M-M, F-F kit)</strong><span class="note">Useful for prototyping and connecting ESP32 to breadboard/sensors during testing</span></td>
+  <td><a href="https://www.amazon.com/s?k=dupont+jumper+wire+kit+120+pcs" target="_blank">Search: Dupont Wire Kit</a></td>
+  <td>1</td><td>$7</td><td>$7</td>
+</tr>
+<tr>
+  <td><strong>Zip Ties + Cable Clips Assortment</strong><span class="note">Cable management along frame</span></td>
+  <td><a href="https://www.amazon.com/s?k=zip+ties+cable+clips+assortment" target="_blank">Search: Zip Ties + Clips</a></td>
+  <td>1</td><td>$5</td><td>$5</td>
+</tr>
+</table>
+</div>
+
+<div class="section">
+<div class="section-header">
+  <span class="section-title">🪵 FRAME (from hardware store, not Amazon)</span>
+  <span class="section-cost">~$14</span>
+</div>
+<table>
+<tr><th>Item</th><th>Source</th><th>Qty</th><th>Est. Price</th><th>Subtotal</th></tr>
+<tr>
+  <td><strong>1×2 Pine Lumber (8ft)</strong><span class="note">Pick the straightest boards. Inspect for warping. Cut to length per build plan</span></td>
+  <td>Home Depot / Lowes (in-store, ~$3 each)</td>
+  <td>3</td><td>$3 ea</td><td>$9</td>
+</tr>
+<tr>
+  <td><strong>#8 × 1.5" Wood Screws (box of 50)</strong><span class="note">Frame assembly. All joints are screw + 3D printed bracket</span></td>
+  <td>Home Depot / Lowes</td>
+  <td>1</td><td>$5</td><td>$5</td>
+</tr>
+</table>
+</div>
+
+<div class="section">
+<div class="section-header">
+  <span class="section-title" style="font-size: 16px;">📦 GRAND TOTAL</span>
+  <span class="section-cost" style="font-size: 18px;">~$374 + tax/shipping</span>
+</div>
+<table>
+<tr class="total-row"><td colspan="3">Budget range with shipping variability:</td><td colspan="2">$350 – $450</td></tr>
+</table>
+</div>
+
+<div class="footer">
+  <p><strong>Notes before ordering:</strong></p>
+  <p>• Many items come in multi-packs that are cheaper per-unit than singles (ESP32, TMC2209, servos, limit switches). You'll have spares.</p>
+  <p>• <strong>Measure your DWC tote before buying</strong> — internal dimensions must fit 4 net pots at 5" spacing (~24" minimum internal length).</p>
+  <p>• <strong>Rod lengths matter</strong> — you need 2× ~1200mm for the rail and 2× ~250mm for the Z axis. Buy longer and cut, or order specific lengths.</p>
+  <p>• <strong>pH and EC sensor kits are the most expensive items</strong> ($65 combined). DFRobot Gravity series are recommended for ESP32 compatibility and documentation quality.</p>
+  <p>• <strong>The nutrient solutions</strong> (pH up/down + A/B) are consumables. Budget ~$40 for the initial set, they last months for a 4-plant system.</p>
+  <p>• <strong>Not included</strong>: 3D printed parts ($0 with your printer access), solder, tools, pH/EC calibration solutions (optional but recommended, ~$10 for a set).</p>
+</div>
+
+</body>
+</html>

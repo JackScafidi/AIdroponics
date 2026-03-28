@@ -1,0 +1,5 @@
+string plant_id
+---
+GrowthDataPoint[] growth_history
+float64[] harvest_weights
+uint32 total_inspections

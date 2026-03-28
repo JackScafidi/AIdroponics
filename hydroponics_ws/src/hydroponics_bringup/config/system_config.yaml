@@ -1,0 +1,29 @@
+/**:
+  ros__parameters:
+    # Global system configuration
+    system:
+      default_plant_profile: "parsley"
+      inspection_interval_hours: 48.0
+      max_retry_count: 3
+      num_plant_positions: 4
+      plant_spacing_mm: 127.0  # 5 inches
+
+    # Safety thresholds
+    safety:
+      water_level_critical: false
+      temperature_max_c: 30.0
+      temperature_min_c: 10.0
+      disease_pause_enabled: true
+      watchdog_timeout_s: 5.0
+
+    # Reservoir management
+    reservoir:
+      water_change_interval_days: 14
+      low_water_pause_dosing: true
+      mixing_wait_seconds: 60
+
+    # Data pipeline
+    data:
+      database_path: "hydroponics_data.db"
+      image_storage_path: "inspection_images/"
+      export_formats: ["csv", "json"]

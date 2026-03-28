@@ -1,0 +1,267 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  MIT License
+  Copyright (c) 2026 Claudroponics
+
+  main_tree.xml — Master BehaviorTree.CPP v4 orchestration tree for the
+  Claudroponics autonomous hydroponics system.
+
+  Execution flow (every BT tick, driven by bt_manager at ~10 Hz):
+    1. Safety guard: system-safe + no-disease check wraps everything
+    2. Periodic inspection cycle (triggered every ~48 h via external flag)
+    3. Harvest cycle: evaluate maturity for each plant, cut/replace as needed
+    4. Nutrient check: verify and correct pH / EC / temperature
+    5. Publish idle status
+-->
+<root BTCPP_format="4" main_tree_to_execute="HydroponicsMain">
+
+  <!-- ================================================================
+       MODEL — documents every custom node's ports for the Groot editor
+       ================================================================ -->
+  <TreeNodesModel>
+
+    <!-- Vision nodes -->
+    <Action ID="TriggerInspection"/>
+    <Condition ID="CheckPlantMaturity">
+      <input_port name="plant_index" type="int">Plant position index 0-3</input_port>
+    </Condition>
+    <Condition ID="CheckPlantHealth">
+      <input_port name="plant_index" type="int">Plant position index 0-3</input_port>
+    </Condition>
+    <Condition ID="CheckChannelDeficiency"/>
+    <Action ID="SetInspectionLight">
+      <input_port name="light_on" type="bool">Enable inspection LEDs</input_port>
+    </Action>
+
+    <!-- Harvest nodes -->
+    <Condition ID="CheckHarvestNeeded"/>
+    <Action ID="ExecuteHarvestAction">
+      <input_port name="plant_index" type="int">Plant position index 0-3</input_port>
+      <input_port name="harvest_type" type="string">cut or replace</input_port>
+    </Action>
+    <Action ID="TransportToPlantIndex">
+      <input_port name="plant_index" type="int">Plant position index 0-3</input_port>
+    </Action>
+    <Action ID="LogHarvestEvent"/>
+    <Action ID="UpdatePlantState">
+      <input_port name="plant_index" type="int">Plant position index 0-3</input_port>
+      <input_port name="new_state"   type="string">New plant status string</input_port>
+    </Action>
+
+    <!-- Nutrient nodes -->
+    <Condition ID="CheckNutrientStatus">
+      <input_port name="check_type" type="string">ph_ok|ec_ok|temp_ok|water_level_ok</input_port>
+    </Condition>
+    <Action ID="ForceDose">
+      <input_port name="pump_id"   type="string">ph_up|ph_down|nutrient_a|nutrient_b</input_port>
+      <input_port name="amount_ml" type="double">Dose volume in mL</input_port>
+    </Action>
+    <Action ID="WaitForNutrientMixing">
+      <input_port name="duration_s" default="60.0" type="double">Mixing wait seconds</input_port>
+    </Action>
+    <Condition ID="CheckGrowthStage">
+      <input_port name="expected_stage" type="string">seedling|vegetative|mature</input_port>
+    </Condition>
+    <Action ID="PublishNutrientAlert">
+      <input_port name="alert_type" type="string">Alert type identifier</input_port>
+      <input_port name="message"    type="string">Human-readable message</input_port>
+    </Action>
+
+    <!-- Safety nodes -->
+    <Condition ID="CheckSystemSafe"/>
+    <Condition ID="CheckNoDiseaseDetected"/>
+    <Action ID="EmergencyStop"/>
+    <Condition ID="CheckTransportIdle"/>
+    <Action ID="PublishSystemStatus">
+      <input_port name="tree_state"     type="string">BT system state string</input_port>
+      <input_port name="current_action" type="string">Current action description</input_port>
+    </Action>
+
+    <!-- Transport (registered in transport_nodes.cpp) -->
+    <Action ID="TransportTo">
+      <input_port name="target_position" type="string">WORK|GROW|INSPECT|WORK_PLANT_0..3</input_port>
+    </Action>
+
+  </TreeNodesModel>
+
+  <!-- ================================================================
+       MAIN TREE
+       ================================================================ -->
+  <BehaviorTree ID="HydroponicsMain">
+    <Sequence name="MainLoop">
+
+      <!-- Announce we are running -->
+      <PublishSystemStatus tree_state="RUNNING" current_action="starting_tick"/>
+
+      <!-- SAFETY GUARD — ReactiveSequence re-evaluates safety on every tick.
+           Any FAILURE from the safety checks halts the rest of the tree. -->
+      <ReactiveSequence name="SafetyGuard">
+        <CheckSystemSafe/>
+        <CheckNoDiseaseDetected/>
+
+        <!-- MAIN OPERATIONS — only execute when safe -->
+        <Sequence name="Operations">
+
+          <!-- 1. INSPECTION CYCLE
+               The bt_manager sets the blackboard key "inspection_due" to true
+               every 48 h. We use a Fallback so the cycle is skipped when not due. -->
+          <Fallback name="MaybeInspect">
+            <!-- Skip inspection when not due (key absent or false) -->
+            <Inverter>
+              <BlackboardCheckBool key="inspection_due" value="true"/>
+            </Inverter>
+            <!-- Run full inspection sequence -->
+            <Sequence name="InspectionCycle">
+              <PublishSystemStatus tree_state="RUNNING" current_action="inspection"/>
+
+              <!-- Ensure transport is idle before moving -->
+              <Fallback name="EnsureIdle">
+                <CheckTransportIdle/>
+                <EmergencyStop/>
+              </Fallback>
+
+              <!-- Transport to inspection station -->
+              <TransportTo target_position="INSPECT"/>
+
+              <!-- Capture images under controlled lighting -->
+              <SetInspectionLight light_on="true"/>
+              <TriggerInspection/>
+              <SetInspectionLight light_on="false"/>
+
+              <!-- Return tray to grow channel -->
+              <TransportTo target_position="GROW"/>
+
+              <!-- Run harvest cycle if any plant is ready -->
+              <Fallback name="MaybeHarvest">
+                <Sequence name="HarvestIfNeeded">
+                  <CheckHarvestNeeded/>
+                  <SubTree ID="HarvestCycle"/>
+                </Sequence>
+                <AlwaysSuccess/>
+              </Fallback>
+
+              <!-- Always check nutrients after tray returns -->
+              <SubTree ID="NutrientCheck"/>
+
+              <!-- Clear the inspection_due flag -->
+              <SetBlackboard output_key="inspection_due" value="false"/>
+            </Sequence>
+          </Fallback>
+
+          <!-- 2. CONTINUOUS NUTRIENT MONITORING (runs every tick) -->
+          <SubTree ID="NutrientCheck"/>
+
+        </Sequence>
+      </ReactiveSequence>
+
+      <PublishSystemStatus tree_state="RUNNING" current_action="tick_complete"/>
+
+    </Sequence>
+  </BehaviorTree>
+
+  <!-- ================================================================
+       HARVEST CYCLE SUBTREE
+       Processes all 4 plant positions sequentially. Skips plants that
+       don't need harvesting via ForceSuccess wrappers.
+       ================================================================ -->
+  <BehaviorTree ID="HarvestCycle">
+    <Sequence name="HarvestAllPlants">
+      <PublishSystemStatus tree_state="RUNNING" current_action="harvest_cycle"/>
+
+      <!-- Plant 0 -->
+      <ForceSuccess name="TryHarvestPlant0">
+        <Sequence name="HarvestPlant0">
+          <CheckPlantMaturity plant_index="0"/>
+          <CheckPlantHealth   plant_index="0"/>
+          <TransportToPlantIndex plant_index="0"/>
+          <ExecuteHarvestAction  plant_index="0" harvest_type="cut"/>
+          <LogHarvestEvent/>
+          <UpdatePlantState plant_index="0" new_state="HARVESTED"/>
+        </Sequence>
+      </ForceSuccess>
+
+      <!-- Plant 1 -->
+      <ForceSuccess name="TryHarvestPlant1">
+        <Sequence name="HarvestPlant1">
+          <CheckPlantMaturity plant_index="1"/>
+          <CheckPlantHealth   plant_index="1"/>
+          <TransportToPlantIndex plant_index="1"/>
+          <ExecuteHarvestAction  plant_index="1" harvest_type="cut"/>
+          <LogHarvestEvent/>
+          <UpdatePlantState plant_index="1" new_state="HARVESTED"/>
+        </Sequence>
+      </ForceSuccess>
+
+      <!-- Plant 2 -->
+      <ForceSuccess name="TryHarvestPlant2">
+        <Sequence name="HarvestPlant2">
+          <CheckPlantMaturity plant_index="2"/>
+          <CheckPlantHealth   plant_index="2"/>
+          <TransportToPlantIndex plant_index="2"/>
+          <ExecuteHarvestAction  plant_index="2" harvest_type="cut"/>
+          <LogHarvestEvent/>
+          <UpdatePlantState plant_index="2" new_state="HARVESTED"/>
+        </Sequence>
+      </ForceSuccess>
+
+      <!-- Plant 3 -->
+      <ForceSuccess name="TryHarvestPlant3">
+        <Sequence name="HarvestPlant3">
+          <CheckPlantMaturity plant_index="3"/>
+          <CheckPlantHealth   plant_index="3"/>
+          <TransportToPlantIndex plant_index="3"/>
+          <ExecuteHarvestAction  plant_index="3" harvest_type="cut"/>
+          <LogHarvestEvent/>
+          <UpdatePlantState plant_index="3" new_state="HARVESTED"/>
+        </Sequence>
+      </ForceSuccess>
+
+      <!-- Return tray to grow channel after harvest session -->
+      <TransportTo target_position="GROW"/>
+
+    </Sequence>
+  </BehaviorTree>
+
+  <!-- ================================================================
+       NUTRIENT CHECK SUBTREE
+       Verifies water level, pH, EC, and temperature. Doses as needed.
+       ================================================================ -->
+  <BehaviorTree ID="NutrientCheck">
+    <Sequence name="NutrientChecks">
+
+      <!-- Water level is a hard stop — no dosing without water -->
+      <CheckNutrientStatus check_type="water_level_ok"/>
+
+      <!-- pH correction: if outside tolerance, dose and wait -->
+      <Fallback name="PhControl">
+        <CheckNutrientStatus check_type="ph_ok"/>
+        <Sequence name="CorrectPH">
+          <!-- Dose pH up (pump ph_up). Amount is conservative; PID in
+               nutrient_controller handles fine-grained dosing at 1 Hz.
+               This is a coarse BT-level correction for out-of-band values. -->
+          <ForceDose pump_id="ph_up" amount_ml="0.5"/>
+          <WaitForNutrientMixing duration_s="60.0"/>
+        </Sequence>
+      </Fallback>
+
+      <!-- EC correction: dose nutrient A (1:1 A/B ratio by default) -->
+      <Fallback name="EcControl">
+        <CheckNutrientStatus check_type="ec_ok"/>
+        <Sequence name="CorrectEC">
+          <ForceDose pump_id="nutrient_a" amount_ml="1.0"/>
+          <WaitForNutrientMixing duration_s="60.0"/>
+        </Sequence>
+      </Fallback>
+
+      <!-- Temperature: alert only (no active cooling in prototype) -->
+      <Fallback name="TempCheck">
+        <CheckNutrientStatus check_type="temp_ok"/>
+        <PublishNutrientAlert
+          alert_type="TEMP_OUT_OF_RANGE"
+          message="Nutrient solution temperature out of range (18-28°C). Check ambient conditions."/>
+      </Fallback>
+
+    </Sequence>
+  </BehaviorTree>
+
+</root>

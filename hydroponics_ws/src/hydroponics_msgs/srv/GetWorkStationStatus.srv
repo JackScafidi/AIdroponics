@@ -1,0 +1,4 @@
+---
+float64 z_position_mm
+string selected_tool              # CUTTER, GRIPPER, NONE
+string gripper_state              # OPEN, CLOSED, UNKNOWN

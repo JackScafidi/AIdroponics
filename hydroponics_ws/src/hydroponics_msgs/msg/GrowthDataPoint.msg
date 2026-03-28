@@ -1,0 +1,10 @@
+std_msgs/Header header
+string plant_id
+uint8 position_index
+float64 canopy_area_cm2
+float64 height_cm
+uint32 leaf_count
+float64 growth_rate_cm2_per_day
+float64 ph_at_reading
+float64 ec_at_reading
+float64 temp_at_reading
