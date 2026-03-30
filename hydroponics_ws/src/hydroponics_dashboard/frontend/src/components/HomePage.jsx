@@ -1,34 +1,5 @@
 import React from 'react'
 
-const styles = `
-@keyframes leafFall {
-  0% {
-    transform: translateY(-10vh) translateX(0) rotateZ(0deg);
-    opacity: 0;
-  }
-  10% {
-    opacity: 0.8;
-  }
-  50% {
-    transform: translateY(50vh) translateX(40px) rotateZ(120deg);
-  }
-  100% {
-    transform: translateY(110vh) translateX(-60px) rotateZ(240deg);
-    opacity: 0;
-  }
-}
-
-/* smoother side-to-side flutter */
-@keyframes leafSway {
-  0%   { transform: translateX(0px); }
-  50%  { transform: translateX(25px); }
-  100% { transform: translateX(-25px); }
-}
-`;
-
-
-
-
 /* ── Animated leaf SVG for background decoration ─────────────────────────── */
 function LeafDecor({ style }) {
   return (
@@ -121,47 +92,39 @@ export default function HomePage({ onNavigate, connected, nutrientStatus, channe
   const totalYield = harvestEvents?.reduce((s, h) => s + (h.weight_grams ?? 0), 0) ?? 0
 
 const fallingLeaves = React.useMemo(() => {
-  // Seeded PRNG for deterministic "random" values across mounts
   let seed = 47;
-  const rand = () => { 
-    seed = (seed * 16807 + 11) % 2147483647; 
+  const rand = () => {
+    seed = (seed * 16807 + 11) % 2147483647;
     return (seed & 0x7fffffff) / 0x7fffffff;
   };
-  
+
   const greens = ['#4ade80', '#16a34a', '#22c55e', '#15803d', '#86efac', '#34d399', '#4ade80', '#22c55e', '#16a34a', '#15803d'];
-  
-  // 1. INCREASE DENSITY: Upped from 10 to 40 leaves
-  const LEAF_COUNT = 40; 
-  
+  const swayVariants = ['leafSwayA', 'leafSwayB', 'leafSwayC'];
+  const flutterVariants = ['leafFlutterA', 'leafFlutterB', 'leafFlutterC'];
+
+  const LEAF_COUNT = 40;
+
   return Array.from({ length: LEAF_COUNT }, (_, i) => {
-    // 2. EVEN SPATIAL DISPERSION: Dynamically divide the 88 unit width by the new leaf count
-    const colWidth = 88 / LEAF_COUNT; 
-    
-    // 3. VARYING SPEEDS: Randomize fall duration between 9 and 14s to create depth
-    const fallDuration = 9 + rand() * 5; 
-    const tumbleDuration = 3 + rand() * 4;
+    const colWidth = 88 / LEAF_COUNT;
+    const fallDuration = 10 + rand() * 6;
+    const swayDuration = 3 + rand() * 3;
+    const tumbleDuration = 4 + rand() * 4;
 
     return {
-      // Keep them in their calculated lanes, but add a slight jitter so it isn't perfectly rigid
-      x: 6 + (i * colWidth) + (rand() * colWidth * 0.8), 
-      
-      // Slightly reduced max size so the higher density doesn't clutter the screen entirely
-      size: 40 + rand() * 80, 
-      
-      fallDuration: fallDuration,
-      tumbleDuration: tumbleDuration,
-      
-      // 4. EVEN TEMPORAL DISPERSION: Randomize the delay entirely between -fallDuration and 0. 
-      // This ensures leaves are scattered all over the screen vertically when the component mounts.
-      delay: -(rand() * fallDuration), 
-      
-      color: greens[i % greens.length], // Use modulo to safely cycle through the colors array
-      variant: ['leafFlutterA', 'leafFlutterB', 'leafFlutterC'][i % 3],
-      initialRotZ: rand() * 180 - 90,
-      initialRotY: rand() * 50 - 25,
+      x: 6 + (i * colWidth) + (rand() * colWidth * 0.8),
+      size: 40 + rand() * 80,
+      fallDuration,
+      swayDuration,
+      tumbleDuration,
+      delay: -(rand() * fallDuration),
+      color: greens[i % greens.length],
+      swayVariant: swayVariants[i % 3],
+      flutterVariant: flutterVariants[(i + 1) % 3],
+      initialRotZ: rand() * 60 - 30,
+      initialRotY: rand() * 30 - 15,
     };
   });
-}, []); // Empty dependency array ensures this only calculates once
+}, []);
 
   return (
     <div style={{
@@ -173,17 +136,17 @@ const fallingLeaves = React.useMemo(() => {
       <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 0 }}>
         {fallingLeaves.map((leaf, i) => (
           <div key={i} style={{
-            position: 'absolute', left: `${leaf.x}%`, top: 0, opacity: 0,
-            animation: `leafFall ${leaf.fallDuration}s cubic-bezier(.5, 0.0, 0.1,.1) ${leaf.delay}s infinite`,
+            position: 'absolute', left: `${leaf.x}%`, top: 0,
+            animation: `leafFall ${leaf.fallDuration}s linear ${leaf.delay}s infinite`,
             willChange: 'transform',
           }}>
             <div style={{
-              animation: `leafSway ${leaf.tumbleDuration}s ease-in-out ${leaf.delay}s infinite alternate`,
-              transform: `perspective(600px) rotateZ(${leaf.initialRotZ}deg) rotateY(${leaf.initialRotY}deg)`
+              animation: `${leaf.swayVariant} ${leaf.swayDuration}s ease-in-out ${leaf.delay}s infinite`,
           }}>
               <LeafDecor style={{
                 position: 'relative', width: leaf.size, color: leaf.color,
-                animation: `${leaf.variant} ${leaf.tumbleDuration}s ease-in-out ${leaf.delay}s infinite`,
+                transform: `rotateZ(${leaf.initialRotZ}deg) rotateY(${leaf.initialRotY}deg)`,
+                animation: `${leaf.flutterVariant} ${leaf.tumbleDuration}s ease-in-out ${leaf.delay}s infinite`,
                 willChange: 'transform',
               }}/>
             </div>
