@@ -28,8 +28,8 @@ function darkenColor(hex) {
 }
 
 function createLeafProps(isRecycle) {
-  const scale = 0.83 + Math.random() * 2.07
-  const baseDuration = 6 + Math.random() * 8
+  const scale = 0.9 + Math.random() * 1.9
+  const baseDuration = 8 + Math.random() * 10
   return {
     x: 5 + Math.random() * 90,
     scale,
@@ -37,8 +37,8 @@ function createLeafProps(isRecycle) {
     delay: isRecycle ? Math.random() * 2000 : Math.random() * 8000,
     color: GREENS[Math.floor(Math.random() * GREENS.length)],
     variant: Math.floor(Math.random() * 3),
-    swayAmplitude: 40 + Math.random() * 45,
-    swayFrequency: 1.6 + Math.random() * 1.6,
+    swayAmplitude: 50 + Math.random() * 50,
+    swayFrequency: 1.4 + Math.random() * 1.4,
     swayPhase: Math.random() * Math.PI * 2,
     rotYPhase: Math.random() * Math.PI * 2,
     id: Math.random(),
@@ -137,7 +137,7 @@ export default function FallingLeaves() {
         const rotY = Math.sin(sec * data.swayFrequency * 0.7 + data.rotYPhase) * 22
 
         // Opacity — kept low so leaves read as background texture
-        let opacity = 0.12 + data.scale * 0.13
+        let opacity = 0.10 + Math.min(data.scale, 1.2) * 0.1
         if (progress < 0.08) opacity *= progress / 0.08
         if (progress > 0.90) opacity *= (1 - progress) / 0.10
 
