@@ -1,143 +1,105 @@
-# Claudroponics
+# AIdroponics
 
-Autonomous deep-water-culture (DWC) hydroponics system powered by ROS2 Humble,
-BehaviorTree.CPP orchestration, YOLOv8 machine vision, PID nutrient control,
-and a React dashboard.
+**Autonomous deep-water-culture hydroponics system** with AI-powered plant health monitoring, real-time PID nutrient control, and behavior tree orchestration — built on ROS2 Humble, running on a Raspberry Pi 5 with an ESP32 co-processor.
 
-A single linear rail transports plants between a **grow station** and an
-**inspection/harvest station**. Everything from dosing pH/EC, triggering
-inspections, deciding when to harvest, and logging yield data is fully automated.
+A single linear rail transports plants between a grow station and an inspection/harvest station. The system handles everything autonomously: pH/EC dosing, growth-stage lighting schedules, machine vision inspections, harvest decisions, yield analytics, and cloud reporting — all coordinated by a reactive behavior tree that enforces safety invariants on every tick.
 
 ---
 
-## Feature Highlights
+## Tech Stack
 
-- **Station-based transport** — NEMA 17 stepper on linear rail, TMC2209 driver,
-  BehaviorTree-driven move sequences
-- **Machine vision** — YOLOv8 plant health classification (8 classes),
-  canopy area measurement, deficiency detection
-- **Dual-loop PID nutrient control** — independent pH and EC controllers with
-  anti-windup, 4-pump dosing rig
-- **Automated harvest** — weight-based yield measurement (HX711 load cell),
-  harvest history, cut-cycle tracking
-- **React dashboard** — live sensor gauges, behavior tree visualiser, nutrient
-  history charts, plant profile editor, system controls
-- **MQTT bridge** — HiveMQ Cloud TLS, Home Assistant auto-discovery
-- **Docker support** — Python nodes + dashboard containerised for easy deployment
+| Layer | Technologies |
+|---|---|
+| **Orchestration** | BehaviorTree.CPP v4, 25+ custom nodes, reactive safety guards |
+| **Machine Vision** | YOLOv8 segmentation, dual-camera pipeline, pixel-to-mm calibration |
+| **Control Systems** | Dual-loop PID (pH + EC) with anti-windup, derivative-on-measurement |
+| **Embedded** | ESP32-S3 micro-ROS, TMC2209 UART stepper drivers, ISR motion profiles |
+| **Middleware** | ROS2 Humble (C++ & Python), 14 custom msgs, 9 services, 3 actions |
+| **Web** | FastAPI + React, WebSocket streaming, real-time sensor gauges |
+| **Data** | SQLite analytics pipeline, down-sampled time-series, yield economics |
+| **Cloud** | HiveMQ MQTT TLS bridge, Home Assistant auto-discovery |
+| **Infrastructure** | Docker, PlatformIO, colcon build system |
 
----
-
-## Hardware Bill of Materials
-
-| Component | Model / Spec | Qty | Cost (USD) |
-|---|---|---|---|
-| Single-board computer | Raspberry Pi 5 (8 GB) | 1 | $80 |
-| Microcontroller | ESP32-S3 DevKit-C (38-pin) | 1 | $8 |
-| Rail stepper | NEMA 17 (48 mm, 1.7 A) | 1 | $12 |
-| Z-axis stepper | NEMA 17 (40 mm, 1.5 A) | 1 | $10 |
-| Stepper driver | TMC2209 SilentStepStick | 2 | $16 |
-| Harvest servo | Futaba S3003 or MG996R | 1 | $8 |
-| Peristaltic pump 12 V | 1–5 mL/min flow | 4 | $40 |
-| Pump MOSFET | IRF520 or IRLZ44N | 4 | $4 |
-| pH electrode | BNC + analog module | 1 | $20 |
-| EC probe | conductivity cell | 1 | $15 |
-| Temperature sensor | DS18B20 waterproof | 1 | $5 |
-| Load cell | 1 kg bar + HX711 module | 1 | $8 |
-| Overhead camera | RPi Camera Module 3 | 1 | $25 |
-| Side camera | USB webcam (1080p) | 1 | $20 |
-| Grow light | 12 V LED strip (full spectrum) | 1 m | $12 |
-| Inspection LEDs | 6500 K white LED ring | 1 | $6 |
-| Linear rail | 1.2 m aluminium extrusion + belt | 1 | $25 |
-| Power supply | 12 V 5 A | 1 | $18 |
-| DWC channel | 4-pot PVC or foam board | 1 | $30 |
-| Reservoir | 10 L food-grade tub | 1 | $10 |
-| Misc (tubing, nuts, wiring) | — | — | $20 |
-| **Total** | | | **~$392** |
+**Languages:** C++ (BT orchestrator, transport, work station, micro-ROS bridge) / Python (vision, nutrients, harvest, lighting, data, MQTT, dashboard) / JavaScript/React (frontend) / Arduino C++ (ESP32 firmware)
 
 ---
 
-## Quick Start
+## System Architecture
 
-### Prerequisites
-
-- Raspberry Pi 5 running Ubuntu 22.04 (64-bit)
-- ROS2 Humble installed (`ros-humble-desktop`)
-- PlatformIO CLI (for ESP32 firmware)
-- Node.js 20+ (for React frontend build)
-
-### 1. Clone & build
-
-```bash
-git clone https://github.com/your-org/claudroponics.git
-cd claudroponics/hydroponics_ws
-
-# Install ROS2 dependencies
-rosdep install --from-paths src --ignore-src -r -y
-
-# Build
-colcon build --symlink-install
-source install/setup.bash
 ```
-
-### 2. Flash ESP32 firmware
-
-```bash
-cd esp32_firmware
-pio run --target upload
-```
-
-See `esp32_firmware/README.md` for pin wiring and calibration.
-
-### 3. Build the React frontend
-
-```bash
-cd hydroponics_ws/src/hydroponics_dashboard/frontend
-npm install
-npm run build
-```
-
-### 4. Launch
-
-```bash
-# Full system (parsley profile, real hardware)
-ros2 launch hydroponics_bringup full_system.launch.py plant_profile:=parsley
-
-# Simulation (no hardware required)
-ros2 launch hydroponics_bringup simulation.launch.py
-
-# Access dashboard
-xdg-open http://localhost:8080
-```
-
-### 5. Train / update the vision model
-
-```bash
-cd training
-
-# Collect frames from the running system
-python collect_training_data.py collect --limit 500
-
-# Label and train
-python collect_training_data.py label
-python collect_training_data.py split
-python train_yolo.py --model yolov8s.pt --epochs 150
+                          ┌──────────────────────────────────┐
+                          │   BehaviorTree.CPP Orchestrator  │
+                          │   (10 Hz reactive safety guard)  │
+                          └────────┬──────────┬──────────────┘
+                                   │          │
+                    ROS2 Actions    │          │   ROS2 Services
+               ┌───────────────────┤          ├──────────────────────┐
+               │                   │          │                      │
+     ┌─────────▼──────┐  ┌────────▼────┐  ┌──▼──────────┐  ┌───────▼────────┐
+     │   Transport    │  │  Work Stn   │  │   Vision    │  │   Nutrients    │
+     │  (C++ Action)  │  │ (C++ Action)│  │  (YOLOv8)   │  │  (Dual PID)   │
+     │  Linear Rail   │  │ Z-Axis+Servo│  │ 2 Cameras   │  │  4 Pumps      │
+     └───────┬────────┘  └──────┬──────┘  └──────┬──────┘  └───────┬───────┘
+             │                  │                 │                  │
+             └──────────┬───────┘                 │          ┌──────┘
+                        │                         │          │
+              ┌─────────▼─────────┐      ┌────────▼──┐  ┌───▼────────────┐
+              │  micro-ROS Bridge │      │  Harvest  │  │   Lighting     │
+              │  (ESP32 Watchdog) │      │  Manager  │  │  (PWM Sched)   │
+              └─────────┬─────────┘      └─────┬─────┘  └───┬────────────┘
+                        │                      │            │
+    ┌───────────────────┤              ┌───────▼────────────▼──┐
+    │                   │              │    Data Pipeline      │
+    │  ┌────────────┐   │              │  SQLite + Analytics   │
+    │  │   ESP32    │   │              └───────────┬───────────┘
+    │  │ micro-ROS  │◄──┘                         │
+    │  │ firmware   │                 ┌────────────┼────────────┐
+    │  └────────────┘                 │            │            │
+    │   2 steppers                ┌───▼───┐  ┌────▼────┐  ┌────▼────┐
+    │   4 pumps                  │ MQTT  │  │ FastAPI │  │ React  │
+    │   5 sensors                │ Bridge│  │ Backend │  │ Dash   │
+    │   3 servos                 └───┬───┘  └────┬────┘  └────────┘
+    │   2 light channels             │           │
+    │   1 load cell              HiveMQ      :8080
+    └────────────────────────────  Cloud
 ```
 
 ---
 
-## Docker (Python nodes + dashboard)
+## Engineering Highlights
 
-```bash
-docker build -t claudroponics:latest .
+### Reactive Behavior Tree Orchestration
+The system is coordinated by a BehaviorTree.CPP v4 tree with 25+ custom nodes across 6 domains. A `ReactiveSequence` root re-evaluates safety conditions (system health, disease flags) on every 10 Hz tick, providing immediate abort capability mid-operation. Long-running operations (transport, harvest, inspection) use `StatefulActionNode` for async handling with timeout protection.
 
-# Simulation mode
-docker run --rm -it -p 8080:8080 claudroponics:latest simulation
+### Machine Vision Pipeline
+Dual-camera YOLOv8 segmentation pipeline classifies plant health across 8 categories. A `PlantMeasurer` module converts pixel-space metrics (canopy area, height, leaf count) to calibrated real-world measurements (cm², cm). A `DeficiencyClassifier` aggregates per-plant health state and detects nutrient deficiency trends (nitrogen, potassium, phosphorus) across the channel.
 
-# Dashboard only (connect to external ROS2 DDS)
-docker run --rm -it --network host \
-  -e ROS_DOMAIN_ID=0 \
-  claudroponics:latest dashboard
-```
+### Dual-Loop PID Nutrient Control
+Independent pH and EC PID controllers run at 1 Hz with derivative-on-measurement (avoids setpoint kick), integral anti-windup clamping, and configurable dead-band tolerance to prevent actuator chatter. Growth-stage-aware setpoints automatically adjust targets as plants progress from seedling to mature. Four peristaltic pumps (pH up/down, Nutrient A/B) are flow-rate calibrated with enforced mixing wait periods between doses.
+
+### ESP32 Real-Time Firmware
+Custom Arduino/micro-ROS firmware manages all hardware I/O: ISR-driven stepper motion profiles on two axes (rail transport + Z-axis), TMC2209 register-level UART configuration for StallGuard4 load detection, non-blocking sensor acquisition loops (pH ADC with 10-sample moving average, EC probe, DS18B20 OneWire, HX711 load cell), PWM-controlled lighting, and MOSFET-gated pump actuation — all without blocking the micro-ROS executor or triggering WDT resets.
+
+### Full-Stack Dashboard
+FastAPI backend bridges ROS2 topics into a REST API with 11+ endpoints covering system status, manual controls (transport, dosing, lighting, e-stop), and analytics queries. A multi-threaded ROS executor runs alongside the ASGI server. The React frontend provides live sensor gauges, behavior tree visualization, nutrient history charts, plant profile management, and harvest tracking with glassmorphism UI.
+
+### Data Pipeline & Economics
+SQLite-backed analytics pipeline down-samples high-frequency sensor data (10 Hz from ESP32) to 0.1 Hz for storage efficiency. Computes growth rates (cm²/day) from consecutive inspections and yield economics (yield per watt-hour, cost per gram) from configurable energy/nutrient cost rates. Publishes aggregated `YieldMetrics` every 60 seconds.
+
+---
+
+## Project Metrics
+
+| Metric | Count |
+|---|---|
+| ROS2 Nodes | 11 (4 C++ / 7 Python) |
+| Custom Message Types | 14 |
+| Custom Services / Actions | 9 / 3 |
+| Behavior Tree Nodes | 25+ |
+| Hardware Integrations | 12 peripherals across 2 MCU axes |
+| Communication Layers | 3 (ROS2 DDS, micro-ROS serial, MQTT TLS) |
+| Dashboard API Endpoints | 11+ |
+| Plant Profiles | 5 (parsley, basil, cilantro, mint, lettuce) |
 
 ---
 
@@ -145,46 +107,93 @@ docker run --rm -it --network host \
 
 ```
 hydroponics_ws/src/
-  hydroponics_msgs/          Custom msg/srv/action (13 msg, 9 srv, 3 action)
-  hydroponics_transport/     C++ rail transport controller (ROS2 action server)
-  hydroponics_work_station/  C++ Z-axis + servo controller (ROS2 action server)
-  hydroponics_micro_ros_bridge/ C++ ESP32 watchdog / topic relay
-  hydroponics_bt/            C++ BehaviorTree.CPP master orchestrator
-  hydroponics_vision/        Python YOLOv8 vision node
-  hydroponics_nutrients/     Python PID nutrient controller
-  hydroponics_lighting/      Python light schedule controller
-  hydroponics_harvest/       Python harvest manager
-  hydroponics_data/          Python SQLite data pipeline + analytics
-  hydroponics_mqtt/          Python MQTT bridge (HiveMQ Cloud)
-  hydroponics_dashboard/     FastAPI + React web dashboard
-  hydroponics_mocks/         Mock ESP32 + cameras for simulation
-esp32_firmware/              PlatformIO Arduino + micro-ROS firmware
-training/                    YOLOv8 training scripts
-docs/                        Architecture, wiring, calibration, scaling guides
-docker/                      Dockerfile + entrypoint
+  hydroponics_msgs/             Custom msg/srv/action definitions
+  hydroponics_bt/               C++ BehaviorTree.CPP orchestrator + 25 custom nodes
+  hydroponics_transport/        C++ linear rail action server (TransportTo)
+  hydroponics_work_station/     C++ Z-axis + servo action server (MoveZ)
+  hydroponics_micro_ros_bridge/ C++ ESP32 watchdog and connectivity monitor
+  hydroponics_vision/           Python YOLOv8 vision pipeline (4 modules)
+  hydroponics_nutrients/        Python dual-PID nutrient controller
+  hydroponics_lighting/         Python photoperiod schedule controller
+  hydroponics_harvest/          Python harvest manager + decision logic
+  hydroponics_data/             Python SQLite analytics pipeline (4 modules)
+  hydroponics_mqtt/             Python HiveMQ Cloud MQTT bridge
+  hydroponics_dashboard/        FastAPI backend + React frontend (14 components)
+  hydroponics_bringup/          6 launch files + URDF xacro model
+  hydroponics_mocks/            Mock ESP32 + cameras for simulation mode
+esp32_firmware/                 PlatformIO micro-ROS firmware (7 source modules)
+training/                       YOLOv8 training + data collection scripts
+docs/                           Architecture, wiring, calibration, scaling guides
+docker/                         Dockerfile + entrypoint
 ```
 
 ---
 
-## Configuration
+## Hardware
 
-| File | Purpose |
-|---|---|
-| `hydroponics_bringup/config/plant_profiles/parsley.yaml` | pH/EC targets, harvest thresholds by growth stage |
-| `hydroponics_nutrients/config/pid_params.yaml` | PID gains, anti-windup limits |
-| `hydroponics_transport/config/transport_params.yaml` | Rail positions (mm), steps/mm |
-| `hydroponics_vision/config/vision_params.yaml` | Camera IDs, ROI, YOLO model path |
-| `hydroponics_mqtt/config/mqtt_config.yaml` | Broker host, TLS certs, topic map |
-| `hydroponics_data/config/economics.yaml` | Energy/nutrient cost rates |
+| Component | Model / Spec | Qty | Cost |
+|---|---|---|---|
+| Single-board computer | Raspberry Pi 5 (8 GB) | 1 | $80 |
+| Microcontroller | ESP32-S3 DevKit-C | 1 | $8 |
+| Rail stepper | NEMA 17 (48 mm, 1.7 A) | 1 | $12 |
+| Z-axis stepper | NEMA 17 (40 mm, 1.5 A) | 1 | $10 |
+| Stepper drivers | TMC2209 SilentStepStick | 2 | $16 |
+| Harvest servo | MG996R | 1 | $8 |
+| Peristaltic pumps | 12 V, 1-5 mL/min | 4 | $40 |
+| pH electrode | BNC + analog module | 1 | $20 |
+| EC probe | Conductivity cell | 1 | $15 |
+| Temperature sensor | DS18B20 waterproof | 1 | $5 |
+| Load cell | 1 kg bar + HX711 | 1 | $8 |
+| Cameras | RPi Camera Module 3 + USB 1080p | 2 | $45 |
+| Grow light | 12 V full spectrum LED strip | 1 m | $12 |
+| Inspection LEDs | 6500 K white LED ring | 1 | $6 |
+| Linear rail | 1.2 m aluminium extrusion + belt | 1 | $25 |
+| Power supply | 12 V 5 A | 1 | $18 |
+| DWC channel | 4-pot PVC | 1 | $30 |
+| Reservoir | 10 L food-grade | 1 | $10 |
+| Misc | Tubing, MOSFETs, wiring | -- | $24 |
+| **Total** | | | **~$392** |
+
+---
+
+## Quick Start
+
+```bash
+# Build
+cd hydroponics_ws
+rosdep install --from-paths src --ignore-src -r -y
+colcon build --symlink-install
+source install/setup.bash
+
+# Launch (simulation — no hardware required)
+ros2 launch hydroponics_bringup simulation.launch.py
+
+# Launch (full system with hardware)
+ros2 launch hydroponics_bringup full_system.launch.py plant_profile:=parsley
+
+# Dashboard at http://localhost:8080
+```
+
+### ESP32 Firmware
+```bash
+cd esp32_firmware
+pio run --target upload    # See esp32_firmware/README.md for pin wiring
+```
+
+### Docker
+```bash
+docker build -t aidroponics:latest .
+docker run --rm -it -p 8080:8080 aidroponics:latest simulation
+```
 
 ---
 
 ## Documentation
 
-- [Architecture](docs/architecture.md) — node inventory, topic list, data flow
+- [Architecture](docs/architecture.md) — Node inventory, topic graph, data flow
 - [Wiring Diagram](docs/wiring_diagram.md) — ESP32 pin assignments, schematic
-- [Calibration Guide](docs/calibration_guide.md) — stepper, pH, EC, load cell
-- [Scaling Guide](docs/scaling_guide.md) — multi-channel, multi-computer, commercial
+- [Calibration Guide](docs/calibration_guide.md) — Stepper, pH, EC, load cell procedures
+- [Scaling Guide](docs/scaling_guide.md) — Multi-channel, multi-computer, commercial
 
 ---
 
