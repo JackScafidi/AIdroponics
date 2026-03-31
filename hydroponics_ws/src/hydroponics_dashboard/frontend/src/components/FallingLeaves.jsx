@@ -37,8 +37,8 @@ function createLeafProps(isRecycle) {
     delay: isRecycle ? Math.random() * 2000 : Math.random() * 8000,
     color: GREENS[Math.floor(Math.random() * GREENS.length)],
     variant: Math.floor(Math.random() * 3),
-    swayAmplitude: 50 + Math.random() * 50,
-    swayFrequency: 1.4 + Math.random() * 1.4,
+    swayAmplitude: 70 + Math.random() * 80,
+    swayFrequency: 0.3 + Math.random() * 0.4,
     swayPhase: Math.random() * Math.PI * 2,
     rotYPhase: Math.random() * Math.PI * 2,
     id: Math.random(),
@@ -136,12 +136,15 @@ export default function FallingLeaves() {
         // Y rotation at 0.7x sway frequency
         const rotY = Math.sin(sec * data.swayFrequency * 0.7 + data.rotYPhase) * 22
 
+        // Gentle spin around the leaf's stem (X axis) — slow, subtle twirl
+        const rotX = Math.sin(sec * 0.4 + data.swayPhase * 1.3) * 8
+
         // Opacity — kept low so leaves read as background texture
         let opacity = 0.10 + Math.min(data.scale, 1.2) * 0.1
         if (progress < 0.08) opacity *= progress / 0.08
         if (progress > 0.90) opacity *= (1 - progress) / 0.10
 
-        el.style.transform = `translate3d(${swayX.toFixed(1)}px, ${y.toFixed(1)}px, 0) scale(${data.scale}) rotateZ(${rotZ.toFixed(1)}deg) rotateY(${rotY.toFixed(1)}deg)`
+        el.style.transform = `translate3d(${swayX.toFixed(1)}px, ${y.toFixed(1)}px, 0) scale(${data.scale}) rotateZ(${rotZ.toFixed(1)}deg) rotateY(${rotY.toFixed(1)}deg) rotateX(${rotX.toFixed(1)}deg)`
         el.style.opacity = opacity.toFixed(3)
       }
 
