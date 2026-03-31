@@ -129,33 +129,6 @@ docker/                         Dockerfile + entrypoint
 
 ---
 
-## Hardware
-
-| Component | Model / Spec | Qty | Cost |
-|---|---|---|---|
-| Single-board computer | Raspberry Pi 5 (8 GB) | 1 | $80 |
-| Microcontroller | ESP32-S3 DevKit-C | 1 | $8 |
-| Rail stepper | NEMA 17 (48 mm, 1.7 A) | 1 | $12 |
-| Z-axis stepper | NEMA 17 (40 mm, 1.5 A) | 1 | $10 |
-| Stepper drivers | TMC2209 SilentStepStick | 2 | $16 |
-| Harvest servo | MG996R | 1 | $8 |
-| Peristaltic pumps | 12 V, 1-5 mL/min | 4 | $40 |
-| pH electrode | BNC + analog module | 1 | $20 |
-| EC probe | Conductivity cell | 1 | $15 |
-| Temperature sensor | DS18B20 waterproof | 1 | $5 |
-| Load cell | 1 kg bar + HX711 | 1 | $8 |
-| Cameras | RPi Camera Module 3 + USB 1080p | 2 | $45 |
-| Grow light | 12 V full spectrum LED strip | 1 m | $12 |
-| Inspection LEDs | 6500 K white LED ring | 1 | $6 |
-| Linear rail | 1.2 m aluminium extrusion + belt | 1 | $25 |
-| Power supply | 12 V 5 A | 1 | $18 |
-| DWC channel | 4-pot PVC | 1 | $30 |
-| Reservoir | 10 L food-grade | 1 | $10 |
-| Misc | Tubing, MOSFETs, wiring | -- | $24 |
-| **Total** | | | **~$392** |
-
----
-
 ## Quick Start
 
 ```bash
