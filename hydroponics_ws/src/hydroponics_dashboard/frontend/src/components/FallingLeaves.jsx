@@ -28,7 +28,7 @@ function darkenColor(hex) {
 }
 
 function createLeafProps(isRecycle) {
-  const scale = 0.55 + Math.random() * 0.9
+  const scale = 0.83 + Math.random() * 2.07
   const baseDuration = 6 + Math.random() * 8
   return {
     x: 5 + Math.random() * 90,
@@ -49,7 +49,7 @@ function LeafSVG({ variant, color }) {
   const stroke = darkenColor(color)
   const veins = VEIN_DATA[variant]
   return (
-    <svg viewBox="0 0 30 40" width={30} height={40}>
+    <svg viewBox="0 0 30 40" width={54} height={72}>
       <path d={LEAF_PATHS[variant]} fill={color} />
       <path d={veins.c} stroke={stroke} strokeWidth="0.8" fill="none" opacity="0.5" />
       <path d={veins.l} stroke={stroke} strokeWidth="0.6" fill="none" opacity="0.3" />
@@ -136,8 +136,8 @@ export default function FallingLeaves() {
         // Y rotation at 0.7x sway frequency
         const rotY = Math.sin(sec * data.swayFrequency * 0.7 + data.rotYPhase) * 22
 
-        // Opacity with depth parallax + fade in/out
-        let opacity = 0.45 + data.scale * 0.4
+        // Opacity — kept low so leaves read as background texture
+        let opacity = 0.12 + data.scale * 0.13
         if (progress < 0.08) opacity *= progress / 0.08
         if (progress > 0.90) opacity *= (1 - progress) / 0.10
 
@@ -159,6 +159,7 @@ export default function FallingLeaves() {
     <div style={{
       position: 'absolute', inset: 0, overflow: 'hidden',
       pointerEvents: 'none', zIndex: 0,
+      filter: 'blur(1.5px)',
     }}>
       {leaves.map((leaf, i) => (
         <div
