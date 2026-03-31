@@ -14,10 +14,11 @@ import json
 import logging
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, Header, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
+from hydroponics_dashboard.auth import create_token, revoke_token, verify_password, verify_token
 from hydroponics_dashboard.ros_bridge import RosBridge
 
 logger = logging.getLogger(__name__)
@@ -59,6 +60,23 @@ class TransportRequest(BaseModel):
 
 class EStopRequest(BaseModel):
     reason: str = Field(default="Manual E-STOP from dashboard")
+
+
+class LoginRequest(BaseModel):
+    password: str
+
+
+# ---------------------------------------------------------------------------
+# Auth dependency — protects control endpoints
+# ---------------------------------------------------------------------------
+
+
+async def require_auth(authorization: str = Header(None)) -> None:
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Authentication required")
+    token = authorization[7:]
+    if not verify_token(token):
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
 
 
 # ---------------------------------------------------------------------------
@@ -126,7 +144,39 @@ _PLANT_PROFILES: List[Dict[str, Any]] = [
 
 
 # ---------------------------------------------------------------------------
-# Status endpoints
+# Auth endpoints
+# ---------------------------------------------------------------------------
+
+
+@router.post("/api/auth/login", tags=["auth"])
+async def login(body: LoginRequest) -> Dict[str, Any]:
+    """Authenticate with password to obtain a bearer token for control access."""
+    if verify_password(body.password):
+        token = create_token()
+        return {"authenticated": True, "token": token}
+    raise HTTPException(status_code=401, detail="Invalid password")
+
+
+@router.get("/api/auth/check", tags=["auth"])
+async def check_auth(authorization: str = Header(None)) -> Dict[str, Any]:
+    """Check whether the current bearer token is valid."""
+    if authorization and authorization.startswith("Bearer "):
+        token = authorization[7:]
+        if verify_token(token):
+            return {"authenticated": True}
+    return {"authenticated": False}
+
+
+@router.post("/api/auth/logout", tags=["auth"])
+async def logout(authorization: str = Header(None)) -> Dict[str, Any]:
+    """Revoke the current bearer token."""
+    if authorization and authorization.startswith("Bearer "):
+        revoke_token(authorization[7:])
+    return {"status": "ok"}
+
+
+# ---------------------------------------------------------------------------
+# Status endpoints (public — no auth required)
 # ---------------------------------------------------------------------------
 
 
@@ -219,7 +269,7 @@ async def get_latest_inspection(
 # ---------------------------------------------------------------------------
 
 
-@router.post("/api/controls/transport/{position}", tags=["controls"])
+@router.post("/api/controls/transport/{position}", tags=["controls"], dependencies=[Depends(require_auth)])
 async def control_transport(
     position: str, bridge: RosBridge = Depends(get_bridge)
 ) -> Dict[str, Any]:
@@ -247,7 +297,7 @@ async def control_transport(
     return {"status": "accepted", "target_position": pos_upper}
 
 
-@router.post("/api/controls/inspect", tags=["controls"])
+@router.post("/api/controls/inspect", tags=["controls"], dependencies=[Depends(require_auth)])
 async def control_inspect(bridge: RosBridge = Depends(get_bridge)) -> Dict[str, Any]:
     """Trigger a manual inspection cycle."""
     result = await asyncio.get_event_loop().run_in_executor(
@@ -260,7 +310,7 @@ async def control_inspect(bridge: RosBridge = Depends(get_bridge)) -> Dict[str, 
     return {"status": "ok", "scan_number": result["scan_number"]}
 
 
-@router.post("/api/controls/harvest", tags=["controls"])
+@router.post("/api/controls/harvest", tags=["controls"], dependencies=[Depends(require_auth)])
 async def control_harvest(bridge: RosBridge = Depends(get_bridge)) -> Dict[str, Any]:
     """Trigger a manual harvest cycle (sends ExecuteHarvest action with empty plan)."""
     from hydroponics_msgs.msg import HarvestPlan  # type: ignore
@@ -274,7 +324,7 @@ async def control_harvest(bridge: RosBridge = Depends(get_bridge)) -> Dict[str, 
     return {"status": "accepted"}
 
 
-@router.post("/api/controls/dose", tags=["controls"])
+@router.post("/api/controls/dose", tags=["controls"], dependencies=[Depends(require_auth)])
 async def control_dose(
     body: DoseRequest, bridge: RosBridge = Depends(get_bridge)
 ) -> Dict[str, Any]:
@@ -296,7 +346,7 @@ async def control_dose(
     return {"status": "ok", "pump_id": body.pump_id, "amount_ml": body.amount_ml}
 
 
-@router.post("/api/controls/light/{intensity}", tags=["controls"])
+@router.post("/api/controls/light/{intensity}", tags=["controls"], dependencies=[Depends(require_auth)])
 async def control_light(
     intensity: float, bridge: RosBridge = Depends(get_bridge)
 ) -> Dict[str, Any]:
@@ -317,7 +367,7 @@ async def control_light(
     return {"status": "ok", "intensity_percent": intensity}
 
 
-@router.post("/api/controls/estop", tags=["controls"])
+@router.post("/api/controls/estop", tags=["controls"], dependencies=[Depends(require_auth)])
 async def control_estop(
     body: Optional[EStopRequest] = None,
     bridge: RosBridge = Depends(get_bridge),

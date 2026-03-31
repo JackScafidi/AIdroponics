@@ -139,6 +139,7 @@ export default function App() {
   const [unreadAlerts, setUnread]         = useState(0)
   const [sidebarHover, setSidebarHover]   = useState(null)
   const [dropletsVisible, setDropletsVisible] = useState(false)
+  const [authToken, setAuthToken]         = useState(() => localStorage.getItem('aidroponics_auth_token'))
 
   // REMOVED: const [now, setNow] (The Phantom Clock CPU drain)
 
@@ -209,6 +210,36 @@ export default function App() {
     return () => clearInterval(timer)
   }, [])
 
+  // Validate stored auth token on mount
+  useEffect(() => {
+    if (!authToken) return
+    fetch('/api/auth/check', { headers: { Authorization: `Bearer ${authToken}` } })
+      .then(r => r.json())
+      .then(data => {
+        if (!data.authenticated) {
+          setAuthToken(null)
+          localStorage.removeItem('aidroponics_auth_token')
+        }
+      })
+      .catch(() => {})
+  }, [])
+
+  const handleLogin = (token) => {
+    setAuthToken(token)
+    localStorage.setItem('aidroponics_auth_token', token)
+  }
+
+  const handleLogout = () => {
+    if (authToken) {
+      fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${authToken}` },
+      }).catch(() => {})
+    }
+    setAuthToken(null)
+    localStorage.removeItem('aidroponics_auth_token')
+  }
+
   // Hide droplets on every page/tab change, then fade in after glass renders
   useEffect(() => {
     setDropletsVisible(false)
@@ -264,7 +295,7 @@ export default function App() {
         return <NutrientHistory/>
       case 'controls':
         switch (activeTab) {
-          case 0: return <SystemControls/>
+          case 0: return <SystemControls authToken={authToken} onLogin={handleLogin} onLogout={handleLogout}/>
           case 1: return <BehaviorTreeStatus btStatus={btStatus}/>
           case 2: return <PlantProfileEditor/>
           case 3: return <AlertPanel alerts={alerts}/>

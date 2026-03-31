@@ -1,12 +1,5 @@
 import React, { useState } from 'react'
 
-const api = (path, method = 'POST', body = null) =>
-  fetch(path, {
-    method,
-    headers: body ? { 'Content-Type': 'application/json' } : {},
-    body: body ? JSON.stringify(body) : undefined,
-  }).then(r => r.json())
-
 /* ── Transport/Action button row (matching mockup 3) ─────────────────────── */
 function ActionRow({ icon, label, active, onClick, variant = 'default' }) {
   return (
@@ -46,7 +39,11 @@ const ActionIcons = {
   dose: '\u{1F9EA}',     // test tube
 }
 
-export default function SystemControls() {
+export default function SystemControls({ authToken, onLogin, onLogout }) {
+  const [password, setPassword] = useState('')
+  const [loginError, setLoginError] = useState('')
+  const [loggingIn, setLoggingIn] = useState(false)
+
   const [doseAmounts, setDoseAmounts] = useState({ ph_up: '1.0', ph_down: '1.0', nutrient_a: '2.0', nutrient_b: '2.0' })
   const [lightIntensity, setLightIntensity] = useState(80)
   const [inspectionLight, setInspectionLight] = useState(false)
@@ -57,6 +54,126 @@ export default function SystemControls() {
 
   const feedback = (msg) => { setStatus(msg); setTimeout(() => setStatus(''), 3000) }
 
+  const api = (path, method = 'POST', body = null) =>
+    fetch(path, {
+      method,
+      headers: {
+        ...(body ? { 'Content-Type': 'application/json' } : {}),
+        ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+      },
+      body: body ? JSON.stringify(body) : undefined,
+    }).then(r => {
+      if (r.status === 401) {
+        onLogout()
+        throw new Error('Session expired')
+      }
+      return r.json()
+    })
+
+  const handleLogin = async (e) => {
+    e.preventDefault()
+    setLoggingIn(true)
+    setLoginError('')
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        onLogin(data.token)
+        setPassword('')
+      } else if (res.status === 401) {
+        setLoginError('Incorrect password')
+      } else {
+        setLoginError(`Server error (${res.status})`)
+      }
+    } catch {
+      setLoginError('Cannot reach backend \u2014 is the server running?')
+    }
+    setLoggingIn(false)
+  }
+
+  /* ── Login gate ──────────────────────────────────────────────────────────── */
+  if (!authToken) {
+    return (
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        minHeight: 400,
+      }}>
+        <div style={{
+          width: '100%', maxWidth: 380, padding: 36,
+          background: 'var(--bg-card)',
+          border: '1px solid var(--border)',
+          borderRadius: 'var(--radius-lg, 16px)',
+          boxShadow: 'var(--shadow-lg, 0 8px 32px rgba(0,0,0,0.2))',
+        }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8,
+          }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent, #4ade80)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+            <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary, #fff)' }}>
+              Owner Access
+            </span>
+          </div>
+          <p style={{
+            fontSize: 13, color: 'var(--text-muted, rgba(255,255,255,0.4))',
+            margin: '0 0 24px', lineHeight: 1.5,
+          }}>
+            Enter the system password to unlock controls. Viewers can see all data but cannot operate the system.
+          </p>
+          <form onSubmit={handleLogin}>
+            <input
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              placeholder="Password"
+              autoFocus
+              style={{
+                width: '100%', padding: '12px 16px',
+                fontSize: 14, borderRadius: 'var(--radius-md, 10px)',
+                background: 'var(--bg-app, #121010)',
+                border: loginError
+                  ? '1px solid var(--red, #ef4444)'
+                  : '1px solid var(--border, rgba(255,255,255,0.08))',
+                color: 'var(--text-primary, #fff)',
+                outline: 'none',
+                boxSizing: 'border-box',
+                transition: 'border-color 0.15s ease',
+              }}
+            />
+            {loginError && (
+              <div style={{
+                fontSize: 12, color: 'var(--red, #ef4444)',
+                marginTop: 8, fontWeight: 500,
+              }}>
+                {loginError}
+              </div>
+            )}
+            <button
+              type="submit"
+              disabled={loggingIn || !password}
+              className="btn-primary"
+              style={{
+                width: '100%', padding: '12px 20px',
+                fontSize: 14, fontWeight: 600, marginTop: 16,
+                borderRadius: 'var(--radius-md, 10px)',
+                opacity: loggingIn || !password ? 0.5 : 1,
+                cursor: loggingIn || !password ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {loggingIn ? 'Authenticating...' : 'Unlock Controls'}
+            </button>
+          </form>
+        </div>
+      </div>
+    )
+  }
+
+  /* ── Authenticated controls ──────────────────────────────────────────────── */
   const emergencyStop = () => {
     if (!window.confirm('Confirm EMERGENCY STOP \u2014 all operations will halt immediately.')) return
     api('/api/emergency_stop').then(() => feedback('Emergency stop sent'))
@@ -99,6 +216,32 @@ export default function SystemControls() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      {/* Auth status bar */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '10px 16px', borderRadius: 'var(--radius-md, 10px)',
+        background: 'rgba(74,222,128,0.06)',
+        border: '1px solid rgba(74,222,128,0.12)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+          <span style={{ fontSize: 12, fontWeight: 600, color: '#4ade80' }}>Owner access active</span>
+        </div>
+        <button
+          onClick={onLogout}
+          style={{
+            fontSize: 12, fontWeight: 500, padding: '4px 12px',
+            borderRadius: 6, border: '1px solid rgba(255,255,255,0.1)',
+            background: 'transparent', color: 'var(--text-muted, rgba(255,255,255,0.4))',
+            cursor: 'pointer',
+          }}
+        >
+          Lock
+        </button>
+      </div>
+
       {/* Status feedback */}
       {status && (
         <div className="alert-banner alert-banner-info" style={{ animation: 'fadeIn 0.2s ease' }}>
