@@ -1,18 +1,5 @@
 import React from 'react'
-
-/* ── Animated leaf SVG for background decoration ─────────────────────────── */
-function LeafDecor({ style }) {
-  return (
-    <svg viewBox="0 0 120 180" fill="none" style={{ position: 'absolute', opacity: 0.07, ...style }}>
-      <path d="M60 0C60 0 10 40 10 100C10 140 30 170 60 180C90 170 110 140 110 100C110 40 60 0 60 0Z"
-        fill="currentColor"/>
-      <path d="M60 30V170" stroke="currentColor" strokeWidth="1.5" opacity="0.5"/>
-      <path d="M60 60L35 90" stroke="currentColor" strokeWidth="1" opacity="0.3"/>
-      <path d="M60 80L85 105" stroke="currentColor" strokeWidth="1" opacity="0.3"/>
-      <path d="M60 110L38 130" stroke="currentColor" strokeWidth="1" opacity="0.3"/>
-    </svg>
-  )
-}
+import FallingLeaves from './FallingLeaves.jsx'
 
 /* ── Glassmorphism card ──────────────────────────────────────────────────── */
 function GlassCard({ children, style, onClick, hoverable = false }) {
@@ -91,41 +78,6 @@ export default function HomePage({ onNavigate, connected, nutrientStatus, channe
   const totalPlants = plants.filter(p => p?.status && p.status !== 'EMPTY').length
   const totalYield = harvestEvents?.reduce((s, h) => s + (h.weight_grams ?? 0), 0) ?? 0
 
-const fallingLeaves = React.useMemo(() => {
-  let seed = 47;
-  const rand = () => {
-    seed = (seed * 16807 + 11) % 2147483647;
-    return (seed & 0x7fffffff) / 0x7fffffff;
-  };
-
-  const greens = ['#4ade80', '#16a34a', '#22c55e', '#15803d', '#86efac', '#34d399', '#4ade80', '#22c55e', '#16a34a', '#15803d'];
-  const swayVariants = ['leafSwayA', 'leafSwayB', 'leafSwayC'];
-  const flutterVariants = ['leafFlutterA', 'leafFlutterB', 'leafFlutterC'];
-
-  const LEAF_COUNT = 40;
-
-  return Array.from({ length: LEAF_COUNT }, (_, i) => {
-    const colWidth = 88 / LEAF_COUNT;
-    const fallDuration = 10 + rand() * 6;
-    const swayDuration = 3 + rand() * 3;
-    const tumbleDuration = 4 + rand() * 4;
-
-    return {
-      x: 6 + (i * colWidth) + (rand() * colWidth * 0.8),
-      size: 40 + rand() * 80,
-      fallDuration,
-      swayDuration,
-      tumbleDuration,
-      delay: -(rand() * fallDuration),
-      color: greens[i % greens.length],
-      swayVariant: swayVariants[i % 3],
-      flutterVariant: flutterVariants[(i + 1) % 3],
-      initialRotZ: rand() * 60 - 30,
-      initialRotY: rand() * 30 - 15,
-    };
-  });
-}, []);
-
   return (
     <div style={{
       position: 'absolute', inset: 0, overflow: 'auto',
@@ -133,26 +85,7 @@ const fallingLeaves = React.useMemo(() => {
       color: '#fff',
     }}>
       {/* Falling leaf decorations */}
-      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 0 }}>
-        {fallingLeaves.map((leaf, i) => (
-          <div key={i} style={{
-            position: 'absolute', left: `${leaf.x}%`, top: 0,
-            animation: `leafFall ${leaf.fallDuration}s linear ${leaf.delay}s infinite`,
-            willChange: 'transform',
-          }}>
-            <div style={{
-              animation: `${leaf.swayVariant} ${leaf.swayDuration}s ease-in-out ${leaf.delay}s infinite`,
-          }}>
-              <LeafDecor style={{
-                position: 'relative', width: leaf.size, color: leaf.color,
-                transform: `rotateZ(${leaf.initialRotZ}deg) rotateY(${leaf.initialRotY}deg)`,
-                animation: `${leaf.flutterVariant} ${leaf.tumbleDuration}s ease-in-out ${leaf.delay}s infinite`,
-                willChange: 'transform',
-              }}/>
-            </div>
-          </div>
-        ))}
-      </div>
+      <FallingLeaves />
 
       {/* Radial glow effects */}
       <div style={{
