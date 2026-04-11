@@ -9,7 +9,15 @@
       "WebSearch",
       "WebFetch(domain:web.archive.org)",
       "Bash(npx vite:)",
-      "Bash(npx vite:*)"
+      "Bash(npx vite:*)",
+      "Bash(find 'C:\\\\Users\\\\jacks\\\\Documents\\\\Claude Project\\\\ClaudroponicsProject' -type d -name *dashboard* -o -type d -name *frontend* -o -type d -name *app*)",
+      "Bash(find 'C:\\\\Users\\\\jacks\\\\Documents\\\\Claude Project\\\\ClaudroponicsProject' -name *.jsx -type f)",
+      "Bash(python3:*)",
+      "Bash(python:*)",
+      "Bash(cp -r 'C:/Users/jacks/Documents/Claude Project/ClaudroponicsProject/hydroponics_ws/src/hydroponics_transport' 'C:/Users/jacks/Documents/Claude Project/ClaudroponicsProject/hydroponics_ws/src/future/')",
+      "Bash(cp -r 'C:/Users/jacks/Documents/Claude Project/ClaudroponicsProject/hydroponics_ws/src/hydroponics_bt' 'C:/Users/jacks/Documents/Claude Project/ClaudroponicsProject/hydroponics_ws/src/future/')",
+      "Bash(cp -r 'C:/Users/jacks/Documents/Claude Project/ClaudroponicsProject/hydroponics_ws/src/hydroponics_harvest' 'C:/Users/jacks/Documents/Claude Project/ClaudroponicsProject/hydroponics_ws/src/future/')",
+      "Bash(cp -r 'C:/Users/jacks/Documents/Claude Project/ClaudroponicsProject/hydroponics_ws/src/hydroponics_work_station' 'C:/Users/jacks/Documents/Claude Project/ClaudroponicsProject/hydroponics_ws/src/future/')"
     ]
   }
 }

@@ -20,6 +20,7 @@ setup(
     entry_points={
         'console_scripts': [
             'vision_node = hydroponics_vision.vision_node:main',
+            'plant_vision_node = hydroponics_vision.plant_vision_node:main',
         ],
     },
 )

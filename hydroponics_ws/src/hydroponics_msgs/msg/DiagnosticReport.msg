@@ -1,0 +1,13 @@
+string[] detected_symptoms
+string[] active_rules
+string[] recommendations
+uint8 overall_severity
+float32 probe_ph
+float32 probe_ec
+float32 probe_temp
+float32 plant_height_cm
+float32 plant_area_cm2
+float32 mean_ndvi
+float32 ndvi_trend_slope
+float32 water_level_percent
+builtin_interfaces/Time timestamp

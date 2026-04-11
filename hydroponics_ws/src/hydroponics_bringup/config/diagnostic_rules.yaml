@@ -1,0 +1,113 @@
+# Diagnostic rule engine configuration for AIdroponics V0.1
+#
+# Each rule defines:
+#   name:          unique identifier
+#   conditions:    map of sensor/vision/NDVI predicates that must ALL be true
+#   recommendation: human-readable action for the operator
+#   severity:      info | warning | critical
+#   dosing_action: none | increase_ec | decrease_ec | increase_ph | decrease_ph
+#
+# Condition predicates (all relative to active plant library thresholds):
+#   ph:             in_ideal | above_ideal | below_ideal | above_acceptable | below_acceptable | outside_acceptable
+#   ec:             in_ideal | above_ideal | below_ideal | above_acceptable | below_acceptable | outside_acceptable
+#   temperature:    in_ideal | outside_acceptable
+#   ndvi:           above_healthy_min | below_healthy_min | below_warning | below_critical
+#   ndvi_trend:     stable_or_rising | declining
+#   visual:         no_symptoms | yellowing_established_growth | symptomatic_new_growth | browning_leaf_edges | growth_stall
+#   water_consumption_rate: above_normal | normal
+#
+# Rules are evaluated in order. The FIRST matching rule wins for dosing_action.
+# ALL matching rules are included in the DiagnosticReport active_rules list.
+
+rules:
+
+  - name: healthy
+    conditions:
+      ndvi: above_healthy_min
+      ndvi_trend: stable_or_rising
+      visual: no_symptoms
+      ph: in_ideal
+      ec: in_ideal
+      temperature: in_ideal
+    recommendation: "Plant is healthy. All parameters in ideal range. NDVI stable."
+    severity: info
+    dosing_action: none
+
+  - name: early_stress_detected
+    conditions:
+      ndvi_trend: declining
+      ph: in_ideal
+      ec: in_ideal
+    recommendation: "NDVI declining but sensors in range. Increased monitoring frequency activated. Watch for visible symptoms to emerge. Possible causes: early nutrient imbalance not yet reflected in EC, root zone issue, or light stress."
+    severity: warning
+    dosing_action: none
+
+  - name: nitrogen_deficiency
+    conditions:
+      ndvi_trend: declining
+      visual: yellowing_established_growth
+      ec: below_ideal
+    recommendation: "Likely nitrogen deficiency. Established leaves yellowing with low EC and declining NDVI. System will auto-dose nutrients A+B to raise EC."
+    severity: warning
+    dosing_action: increase_ec
+
+  - name: ph_lockout
+    conditions:
+      ndvi_trend: declining
+      visual: yellowing_established_growth
+      ph: above_acceptable
+      ec: in_ideal
+    recommendation: "pH too high — nutrient lockout likely. EC is adequate but plant cannot absorb nutrients at this pH. System will auto-dose pH-down."
+    severity: critical
+    dosing_action: decrease_ph
+
+  - name: iron_deficiency
+    conditions:
+      ndvi_trend: declining
+      visual: symptomatic_new_growth
+      ph: above_ideal
+    recommendation: "Yellowing on new growth with elevated pH suggests iron deficiency due to reduced uptake at high pH. System will auto-dose pH-down to improve iron availability."
+    severity: warning
+    dosing_action: decrease_ph
+
+  - name: nutrient_burn
+    conditions:
+      visual: browning_leaf_edges
+      ec: above_ideal
+    recommendation: "Possible nutrient burn. EC is high and leaf edges are browning. Dilute by adding fresh water. Do NOT dose nutrients."
+    severity: warning
+    dosing_action: none
+
+  - name: temperature_stress
+    conditions:
+      temperature: outside_acceptable
+    recommendation: "Solution temperature outside acceptable range. Adjust environment — system cannot control temperature."
+    severity: critical
+    dosing_action: none
+
+  - name: growth_stall
+    conditions:
+      visual: growth_stall
+      ndvi: above_healthy_min
+      ec: in_ideal
+      ph: in_ideal
+    recommendation: "Plant growth has stalled despite healthy NDVI and nutrients in range. Check root health, lighting, and dissolved oxygen levels."
+    severity: warning
+    dosing_action: none
+
+  - name: rapid_water_consumption
+    conditions:
+      water_consumption_rate: above_normal
+    recommendation: "Water consumption has increased significantly. May indicate rapid growth phase, heat stress, or increased transpiration. Monitor closely."
+    severity: info
+    dosing_action: none
+
+  - name: sensor_ndvi_mismatch
+    conditions:
+      ndvi: below_warning
+      ph: in_ideal
+      ec: in_ideal
+      temperature: in_ideal
+    recommendation: "NDVI indicates plant stress but all sensor readings are normal. Possible causes: individual nutrient depletion not reflected in bulk EC (consider full solution change), root disease, pest damage, or camera/lighting issue. Inspect plant manually."
+    severity: warning
+    dosing_action: none

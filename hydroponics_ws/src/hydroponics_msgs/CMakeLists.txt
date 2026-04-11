@@ -11,6 +11,7 @@ find_package(std_msgs REQUIRED)
 find_package(builtin_interfaces REQUIRED)
 
 set(msg_files
+  # --- Legacy multi-bin messages (kept for future reintegration) ---
   "msg/PlantPositionState.msg"
   "msg/InspectionResult.msg"
   "msg/ChannelHealthSummary.msg"
@@ -24,9 +25,20 @@ set(msg_files
   "msg/YieldMetrics.msg"
   "msg/LightStatus.msg"
   "msg/BehaviorTreeStatus.msg"
+  # --- V0.1 messages ---
+  "msg/ProbeReading.msg"
+  "msg/NDVIReading.msg"
+  "msg/PlantMeasurement.msg"
+  "msg/WaterLevel.msg"
+  "msg/TopOffEvent.msg"
+  "msg/DosingEvent.msg"
+  "msg/PlantStatus.msg"
+  "msg/DiagnosticReport.msg"
+  "msg/NDVIAlert.msg"
 )
 
 set(srv_files
+  # --- Legacy services (kept for future reintegration) ---
   "srv/TriggerInspection.srv"
   "srv/ForceDose.srv"
   "srv/SetGrowthStage.srv"
@@ -36,6 +48,11 @@ set(srv_files
   "srv/GetWorkStationStatus.srv"
   "srv/SetGrowLightIntensity.srv"
   "srv/SetInspectionLight.srv"
+  # --- V0.1 services ---
+  "srv/TriggerProbe.srv"
+  "srv/TriggerAeration.srv"
+  "srv/SetProbeInterval.srv"
+  "srv/CaptureVision.srv"
 )
 
 set(action_files

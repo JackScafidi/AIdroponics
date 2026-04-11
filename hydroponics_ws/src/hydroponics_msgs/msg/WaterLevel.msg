@@ -1,0 +1,3 @@
+float32 level_cm
+float32 level_percent
+builtin_interfaces/Time timestamp

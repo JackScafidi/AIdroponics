@@ -1,0 +1,27 @@
+from setuptools import setup
+
+package_name = 'hydroponics_probe'
+
+setup(
+    name=package_name,
+    version='0.1.0',
+    packages=[package_name],
+    data_files=[
+        ('share/ament_index/resource_index/packages',
+            ['resource/' + package_name]),
+        ('share/' + package_name, ['package.xml']),
+    ],
+    install_requires=['setuptools'],
+    zip_safe=True,
+    maintainer='AIdroponics',
+    maintainer_email='aidroponics@example.com',
+    description='V0.1 probe arm and aeration cycle nodes.',
+    license='MIT',
+    tests_require=['pytest'],
+    entry_points={
+        'console_scripts': [
+            'probe_arm_node = hydroponics_probe.probe_arm_node:main',
+            'aeration_node = hydroponics_probe.aeration_node:main',
+        ],
+    },
+)

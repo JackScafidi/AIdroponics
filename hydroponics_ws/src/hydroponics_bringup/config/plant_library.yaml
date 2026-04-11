@@ -1,0 +1,77 @@
+# Plant parameter library for AIdroponics V0.1
+# Each entry defines ideal and acceptable bands for pH, EC, and temperature,
+# plus NDVI health thresholds and nutrient A:B dosing ratio.
+#
+# Ideal band:      narrow — triggers yellow warning if exceeded
+# Acceptable band: wide   — triggers red critical if exceeded
+#
+# Active plant is selected at launch via the plant_type parameter.
+
+plants:
+  basil:
+    ph:
+      ideal: [5.5, 6.5]
+      acceptable: [5.0, 6.8]
+    ec_mS_cm:
+      ideal: [1.0, 1.6]
+      acceptable: [0.8, 2.0]
+    temperature_C:
+      ideal: [18, 27]
+      acceptable: [15, 30]
+    ndvi:
+      healthy_min: 0.3
+      warning_threshold: 0.2
+      critical_threshold: 0.1
+    nutrient_ab_ratio: 1.0
+    notes: "Sensitive to over-fertilization. Prefers consistent moisture."
+
+  mint:
+    ph:
+      ideal: [5.5, 6.5]
+      acceptable: [5.0, 7.0]
+    ec_mS_cm:
+      ideal: [2.0, 2.4]
+      acceptable: [1.6, 2.8]
+    temperature_C:
+      ideal: [18, 24]
+      acceptable: [15, 27]
+    ndvi:
+      healthy_min: 0.35
+      warning_threshold: 0.25
+      critical_threshold: 0.15
+    nutrient_ab_ratio: 1.0
+    notes: "Higher nutrient demand than most herbs. Vigorous grower."
+
+  parsley:
+    ph:
+      ideal: [5.5, 6.0]
+      acceptable: [5.0, 6.5]
+    ec_mS_cm:
+      ideal: [0.8, 1.8]
+      acceptable: [0.6, 2.3]
+    temperature_C:
+      ideal: [16, 21]
+      acceptable: [13, 25]
+    ndvi:
+      healthy_min: 0.3
+      warning_threshold: 0.2
+      critical_threshold: 0.1
+    nutrient_ab_ratio: 1.0
+    notes: "Prefers cooler temperatures. Slower initial growth."
+
+  rosemary:
+    ph:
+      ideal: [5.5, 6.0]
+      acceptable: [5.0, 6.5]
+    ec_mS_cm:
+      ideal: [1.0, 1.6]
+      acceptable: [0.8, 2.0]
+    temperature_C:
+      ideal: [18, 24]
+      acceptable: [13, 27]
+    ndvi:
+      healthy_min: 0.25
+      warning_threshold: 0.15
+      critical_threshold: 0.1
+    nutrient_ab_ratio: 1.0
+    notes: "Woody herb, slower growth. Sensitive to overwatering."

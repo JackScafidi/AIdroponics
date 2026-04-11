@@ -1,0 +1,6 @@
+float32 mean_ndvi
+float32 median_ndvi
+float32 std_dev_ndvi
+float32 ndvi_trend_slope
+uint32 trend_window_size
+builtin_interfaces/Time timestamp

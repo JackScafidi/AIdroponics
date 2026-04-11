@@ -1,0 +1,5 @@
+float32 current_ndvi
+float32 ndvi_trend_slope
+float32 ndvi_48h_ago
+string alert_level
+builtin_interfaces/Time timestamp

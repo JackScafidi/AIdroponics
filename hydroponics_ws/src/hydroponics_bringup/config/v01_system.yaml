@@ -1,0 +1,201 @@
+# AIdroponics V0.1 System Configuration
+# All tunable parameters for all V0.1 subsystems.
+# No magic numbers in node code — every threshold, timing, and calibration
+# value must come from this file.
+
+# ---------------------------------------------------------------------------
+# Probe Arm Node
+# ---------------------------------------------------------------------------
+probe:
+  # Interval between automatic probe cycles (seconds)
+  interval_seconds: 900.0          # 15 minutes default
+  # Minimum allowed interval (floor for /probe/set_interval service)
+  min_interval_seconds: 300.0      # 5 minutes
+  # How long to wait after servo extends before reading sensors (seconds)
+  stabilization_delay_seconds: 5.0
+  # GPIO pin or servo channel for probe arm servo (ESP32 firmware channel)
+  servo_channel: 0
+  # Servo angle when probes are submerged (degrees)
+  servo_extended_angle: 90
+  # Servo angle when probes are retracted (degrees)
+  servo_retracted_angle: 0
+
+# ---------------------------------------------------------------------------
+# Aeration Cycle Node
+# ---------------------------------------------------------------------------
+aeration:
+  # Duration of aeration cycle — air pump runs for this long (seconds)
+  cycle_duration_seconds: 600.0    # 10 minutes
+  # Interval between aeration cycles (seconds)
+  cycle_interval_seconds: 1800.0   # 30 minutes
+  # GPIO pin or servo channel for airstone servo (ESP32 firmware channel)
+  servo_channel: 1
+  # Servo angle when airstone is submerged
+  servo_submerged_angle: 90
+  # Servo angle when airstone is retracted
+  servo_retracted_angle: 0
+  # GPIO pin for air pump relay
+  air_pump_gpio_pin: 17
+
+# ---------------------------------------------------------------------------
+# Camera Settings (RGB + NoIR CSI cameras)
+# ---------------------------------------------------------------------------
+camera:
+  rgb:
+    device_id: 0                   # CSI port 0 (Raspberry Pi HQ Camera, IMX477)
+    exposure_time_us: 10000        # Fixed exposure (microseconds) — locked after startup
+    analog_gain: 1.0               # Fixed analog gain
+    white_balance_red: 1.5         # Fixed WB red gain (calibrate with gray card)
+    white_balance_blue: 1.8        # Fixed WB blue gain
+    width: 1920
+    height: 1080
+
+  ndvi:
+    device_id: 1                   # CSI port 1 (NoIR Camera V2, no IR filter)
+    exposure_time_us: 8000         # Fixed exposure
+    analog_gain: 1.0               # Fixed analog gain
+    width: 1920
+    height: 1080
+
+  # Interval between automatic captures (seconds)
+  capture_interval_seconds: 1800.0   # 30 minutes default
+  # Increased capture interval during NDVI early-warning state (seconds)
+  capture_interval_alert_seconds: 600.0  # 10 minutes
+  # Directory for storing captured frame pairs
+  capture_storage_path: "~/.aidroponics/captures/"
+
+# ---------------------------------------------------------------------------
+# AprilTag Calibration
+# ---------------------------------------------------------------------------
+apriltag:
+  # Tag family used on bin markers
+  family: "tag36h11"
+  # Physical size of one tag (meters, measured corner-to-corner)
+  tag_size_m: 0.05                 # 5cm tags
+  # Physical separation between the two tag centers (meters)
+  tag_separation_m: 0.30           # 30cm apart
+  # Maximum allowed discrepancy between two scale estimates (fraction)
+  scale_cross_validation_tolerance: 0.10
+
+# ---------------------------------------------------------------------------
+# HSV Plant Segmentation (RGB camera)
+# ---------------------------------------------------------------------------
+segmentation:
+  # HSV range for green plant material under white LED illumination
+  # Hue: 35-85 (yellow-green to blue-green)
+  # Saturation: 40-255 (avoid grey/white background)
+  # Value: 40-255 (avoid black)
+  hsv_lower: [35, 40, 40]
+  hsv_upper: [85, 255, 255]
+  # Morphological kernel size (pixels)
+  morph_kernel_size: 5
+
+# ---------------------------------------------------------------------------
+# Temporal Change Tracking
+# ---------------------------------------------------------------------------
+temporal_tracking:
+  # Number of captures to keep in history buffer
+  history_buffer_size: 48          # 24 hours at 30-min intervals
+  # Captures ago threshold for "established growth" classification
+  established_growth_threshold: 24  # 12 hours
+  # Captures ago threshold for "new growth" classification
+  new_growth_threshold: 6           # 3 hours
+  # Minimum area growth fraction before flagging growth_stall
+  growth_stall_min_increase_fraction: 0.05  # 5%
+  # Number of captures to look back for growth stall detection
+  growth_stall_window: 12           # 6 hours
+
+# ---------------------------------------------------------------------------
+# NDVI Trend Tracking
+# ---------------------------------------------------------------------------
+ndvi:
+  # Rolling buffer size for trend calculation
+  trend_buffer_size: 48            # 24 hours
+  # Minimum negative slope to trigger declining NDVI early warning
+  declining_slope_threshold: -0.002  # per-capture slope
+
+# ---------------------------------------------------------------------------
+# Bin Geometry
+# ---------------------------------------------------------------------------
+bin:
+  # Internal cross-sectional area of the DWC bin (cm²)
+  cross_section_cm2: 900.0         # 30cm x 30cm
+  # Internal depth of the bin from rim to base (cm)
+  depth_cm: 25.0
+  # Height of the ultrasonic sensor mount above the bin rim (cm)
+  sensor_mount_height_cm: 10.0
+
+# ---------------------------------------------------------------------------
+# Water Level Node
+# ---------------------------------------------------------------------------
+water:
+  # How often to read the ultrasonic sensor (seconds)
+  read_interval_seconds: 300.0     # 5 minutes
+  # GPIO pin for ultrasonic sensor trigger
+  ultrasonic_trigger_pin: 23
+  # GPIO pin for ultrasonic sensor echo
+  ultrasonic_echo_pin: 24
+  # Water level threshold to trigger top-off (% of full)
+  topoff_low_threshold_percent: 60.0
+  # Target water level after top-off (% of full)
+  topoff_target_percent: 85.0
+  # GPIO pin for solenoid valve (fresh water line)
+  solenoid_gpio_pin: 25
+  # How often to poll sensor during fill (seconds)
+  fill_poll_interval_seconds: 1.0
+  # Maximum fill time safety limit (seconds) — close valve if not reached target
+  max_fill_time_seconds: 120.0
+  # Wait time after fill before triggering probe (seconds)
+  post_fill_mixing_delay_seconds: 60.0
+  # Path for water consumption log CSV
+  log_path: "~/.aidroponics/water_log.csv"
+  # Multiplier to detect "above normal" consumption rate (fraction above rolling average)
+  consumption_alert_multiplier: 1.5
+
+# ---------------------------------------------------------------------------
+# Dosing Node
+# ---------------------------------------------------------------------------
+dosing:
+  # pH adjuster concentrations (mol/L)
+  ph_down_molarity: 1.0            # e.g. phosphoric acid
+  ph_up_molarity: 1.0              # e.g. potassium hydroxide
+
+  # Nutrient concentrate EC contributions
+  # EC increase (mS/cm) per mL of concentrate per liter of solution
+  # Calibrate: add 1mL to 1L RO water, measure EC change
+  nutrient_a_ec_per_mL_per_L: 0.5
+  nutrient_b_ec_per_mL_per_L: 0.5
+
+  # Default A:B ratio (overridden by plant_library.yaml value at runtime)
+  nutrient_ab_ratio: 1.0
+
+  # Pump flow rates (mL/second) — calibrate by timing 10mL dispense
+  mL_per_second_ph_down: 1.0
+  mL_per_second_ph_up: 1.0
+  mL_per_second_nutrient_a: 1.0
+  mL_per_second_nutrient_b: 1.0
+
+  # --- Safety scaffolding ---
+  # Maximum single dose for any pump (mL)
+  max_dose_mL: 5.0
+  # Minimum time between consecutive doses of the same pump (seconds)
+  min_dose_interval_seconds: 300.0
+  # Maximum total dose events per hour across all pumps
+  max_doses_per_hour: 8
+  # Number of failed verify-after-dose cycles before emergency lockout
+  emergency_lockout_threshold: 3
+  # Mixing wait time after pH dose before re-probing (seconds)
+  ph_mixing_wait_seconds: 90.0
+  # Mixing wait time after nutrient dose before re-probing (seconds)
+  nutrient_mixing_wait_seconds: 90.0
+
+# ---------------------------------------------------------------------------
+# LED Status Node
+# ---------------------------------------------------------------------------
+led:
+  # GPIO pin for red channel (or single GPIO for addressable LED)
+  gpio_red: 5
+  gpio_green: 6
+  gpio_blue: 13
+  # Active high (true) or active low (false)
+  active_high: true

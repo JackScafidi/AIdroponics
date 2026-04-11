@@ -1,0 +1,5 @@
+float32 interval_seconds
+---
+bool success
+float32 applied_interval_seconds
+string message

@@ -1,0 +1,4 @@
+float32 volume_added_mL
+float32 level_before_percent
+float32 level_after_percent
+builtin_interfaces/Time timestamp
