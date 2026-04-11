@@ -23,27 +23,21 @@ function CircularGauge({ label, value, min, max, target, unit, decimals = 1, col
   const valueAngle = angleForPct(pct)
   const largeArc = (valueAngle - startAngle) > Math.PI ? 1 : 0
   const valuePath = `M ${xAt(startAngle)} ${yAt(startAngle)} A ${R} ${R} 0 ${largeArc} 1 ${xAt(valueAngle)} ${yAt(valueAngle)}`
-
   const targetAngle = angleForPct(tpct)
 
   return (
     <div className="card" style={{ textAlign: 'center', flex: 1, minWidth: 180, padding: '24px 20px' }}>
       <svg width="112" height="80" viewBox="0 0 112 80" style={{ overflow: 'visible', display: 'block', margin: '0 auto 8px' }}>
-        {/* Track */}
         <path d={trackPath} fill="none" stroke="rgba(255,248,235,0.08)" strokeWidth="10" strokeLinecap="round"/>
-        {/* Gradient def */}
         <defs>
           <linearGradient id={`gauge-${label}`} x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%" stopColor={gaugeColor} stopOpacity="0.3"/>
             <stop offset="100%" stopColor={gaugeColor}/>
           </linearGradient>
         </defs>
-        {/* Value arc */}
         <path d={valuePath} fill="none" stroke={`url(#gauge-${label})`} strokeWidth="10" strokeLinecap="round"/>
-        {/* Target indicator */}
         <circle cx={xAt(targetAngle)} cy={yAt(targetAngle)} r="5"
           fill="var(--blue)" stroke="#1c1915" strokeWidth="2.5"/>
-        {/* Center value */}
         <text x={cx} y={cy - 4} textAnchor="middle" fontSize="18" fontWeight="700"
           fill={gaugeColor} fontFamily="Inter, sans-serif">
           {value?.toFixed(decimals) ?? '--'}
@@ -83,7 +77,7 @@ function ProgressRow({ label, value, max, unit, color }) {
     <div style={{ marginBottom: 12 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 5 }}>
         <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{label}</span>
-        <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{value?.toFixed(0) ?? 0} {unit}</span>
+        <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{value?.toFixed(3) ?? 0} {unit}</span>
       </div>
       <div style={{ height: 6, background: 'rgba(255,248,235,0.06)', borderRadius: 'var(--radius-full)', overflow: 'hidden' }}>
         <div style={{
@@ -98,68 +92,84 @@ function ProgressRow({ label, value, max, unit, color }) {
 }
 
 /* ── Main Sensors Page ───────────────────────────────────────────────────── */
-export default function SensorGauges({ nutrientStatus }) {
-  const ns = nutrientStatus ?? {}
+export default function SensorGauges({ probeReading, ndviReading, waterLevel }) {
+  const pr = probeReading ?? {}
+  const nr = ndviReading ?? {}
+  const wl = waterLevel ?? {}
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      {/* Gauges */}
+      {/* Probe gauges */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16 }}>
-        <CircularGauge label="pH" value={ns.ph_current ?? 7.0} min={4} max={9}
-          target={ns.ph_target ?? 6.2} unit="pH" decimals={2} color="var(--blue)"/>
-        <CircularGauge label="EC" value={ns.ec_current ?? 1.8} min={0} max={4}
-          target={ns.ec_target ?? 1.8} unit="mS/cm" decimals={2} color="var(--accent)"/>
-        <CircularGauge label="Temperature" value={ns.temperature_c ?? 22} min={10} max={35}
-          target={22} unit="\u00b0C" decimals={1} color="var(--orange)"/>
+        <CircularGauge label="pH"          value={pr.ph ?? 7.0}           min={4} max={9}  target={6.0} unit="pH"    decimals={2} color="var(--blue)"/>
+        <CircularGauge label="EC"          value={pr.ec_mS_cm ?? 1.2}     min={0} max={4}  target={1.3} unit="mS/cm" decimals={2} color="var(--accent)"/>
+        <CircularGauge label="Temperature" value={pr.temperature_C ?? 22} min={10} max={35} target={22}  unit="\u00b0C"   decimals={1} color="var(--orange)"/>
       </div>
 
-      {/* Info row */}
+      {/* NDVI + water status row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 16 }}>
-        <StatusCard label="Growth Stage" value={ns.growth_stage ?? '--'}
-          sub={`Day ${ns.days_since_planting ?? 0}`} color="var(--accent)"/>
-        <StatusCard label="A:B Ratio" value={ns.a_b_ratio?.toFixed(2) ?? '1.00'}
-          sub="Nutrient ratio" color="var(--blue)"/>
+        <StatusCard
+          label="NDVI"
+          value={nr.mean_ndvi?.toFixed(3) ?? '--'}
+          sub={nr.ndvi_trend_slope != null ? `Trend: ${nr.ndvi_trend_slope >= 0 ? '+' : ''}${(nr.ndvi_trend_slope * 1000).toFixed(2)}\u00d710\u207b\u00b3` : undefined}
+          color={nr.mean_ndvi != null ? (nr.mean_ndvi >= 0.3 ? 'var(--accent)' : nr.mean_ndvi >= 0.2 ? 'var(--yellow)' : 'var(--red)') : 'var(--text-muted)'}
+        />
+        <StatusCard
+          label="Water Level"
+          value={wl.level_percent != null ? `${wl.level_percent.toFixed(0)}%` : '--'}
+          sub={wl.level_cm != null ? `${wl.level_cm.toFixed(1)} cm` : undefined}
+          color="var(--teal)"
+        />
+        <StatusCard
+          label="NDVI Std Dev"
+          value={nr.std_dev_ndvi?.toFixed(3) ?? '--'}
+          sub="Spatial variation"
+          color="var(--blue)"
+        />
+        <StatusCard
+          label="Trend Window"
+          value={nr.trend_window_size ?? '--'}
+          sub="readings"
+          color="var(--text-secondary)"
+        />
       </div>
 
-      {/* PID + Pumps row */}
+      {/* NDVI detail row */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-        {/* PID Outputs */}
+        {/* NDVI channels */}
         <div className="card">
           <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 16 }}>
-            PID Outputs
+            NDVI Readings
           </div>
-          <ProgressRow label="pH PID" value={ns.ph_pid_output} max={5000} unit="ms" color="var(--blue)"/>
-          <ProgressRow label="EC PID" value={ns.ec_pid_output} max={5000} unit="ms" color="var(--accent)"/>
+          <ProgressRow label="Mean NDVI"   value={nr.mean_ndvi}   max={1} unit="" color="var(--accent)"/>
+          <ProgressRow label="Median NDVI" value={nr.median_ndvi} max={1} unit="" color="var(--teal)"/>
+          <ProgressRow label="Std Dev"     value={nr.std_dev_ndvi} max={0.3} unit="" color="var(--blue)"/>
         </div>
 
-        {/* Pump States */}
+        {/* Probe readings summary */}
         <div className="card">
           <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 16 }}>
-            Pump States
+            Latest Probe Reading
           </div>
-          {['pH Up', 'pH Down', 'Nutrient A', 'Nutrient B'].map((name, i) => {
-            const active = ns.pump_active?.[i]
-            return (
-              <div key={i} style={{
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                padding: '8px 0',
-                borderBottom: i < 3 ? '1px solid var(--border)' : 'none',
-              }}>
-                <span style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500 }}>{name}</span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <div style={{
-                    width: 8, height: 8, borderRadius: '50%',
-                    background: active ? 'var(--accent)' : 'var(--text-muted)',
-                    boxShadow: active ? '0 0 6px rgba(22,163,74,0.5)' : 'none',
-                    transition: 'all 0.3s ease',
-                  }}/>
-                  <span style={{ fontSize: 11, color: active ? 'var(--accent)' : 'var(--text-muted)', fontWeight: 500 }}>
-                    {active ? 'Active' : 'Idle'}
-                  </span>
-                </div>
-              </div>
-            )
-          })}
+          {[
+            { name: 'pH',      val: pr.ph?.toFixed(2),           color: 'var(--blue)' },
+            { name: 'EC',      val: pr.ec_mS_cm != null ? `${pr.ec_mS_cm.toFixed(2)} mS/cm` : '--', color: 'var(--accent)' },
+            { name: 'Temp',    val: pr.temperature_C != null ? `${pr.temperature_C.toFixed(1)}\u00b0C` : '--', color: 'var(--orange)' },
+          ].map(({ name, val, color }, i) => (
+            <div key={name} style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              padding: '9px 0',
+              borderBottom: i < 2 ? '1px solid var(--border)' : 'none',
+            }}>
+              <span style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500 }}>{name}</span>
+              <span style={{ fontSize: 15, fontWeight: 700, color }}>{val ?? '--'}</span>
+            </div>
+          ))}
+          {pr.timestamp && (
+            <div style={{ marginTop: 10, fontSize: 11, color: 'var(--text-muted)' }}>
+              {new Date(pr.timestamp).toLocaleTimeString()}
+            </div>
+          )}
         </div>
       </div>
     </div>

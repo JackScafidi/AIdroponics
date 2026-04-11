@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 
-const COLORS = { ph: '#3b82f6', ec: '#16a34a' }
+const COLORS = { ph: '#3b82f6', ec: '#16a34a', temp: '#f97316' }
 
 function ChartArea({ points, color, width = 700, height = 180, yMin, yMax, label }) {
   if (!points || points.length < 2) {
@@ -67,19 +67,19 @@ export default function NutrientHistory() {
 
   useEffect(() => {
     setL(true)
-    fetch(`/api/nutrient_history?range=${range}`)
+    fetch(`/api/probe_history?range=${range}`)
       .then(r => r.json())
       .then(d => { setData(d?.readings ?? []); setL(false) })
       .catch(() => setL(false))
   }, [range])
 
-  const phPoints = data.map(d => ({ x: new Date(d.timestamp).getTime(), y: d.ph }))
-  const ecPoints = data.map(d => ({ x: new Date(d.timestamp).getTime(), y: d.ec }))
+  const phPoints   = data.map(d => ({ x: new Date(d.timestamp).getTime(), y: d.ph }))
+  const ecPoints   = data.map(d => ({ x: new Date(d.timestamp).getTime(), y: d.ec_mS_cm }))
+  const tempPoints = data.map(d => ({ x: new Date(d.timestamp).getTime(), y: d.temperature_C }))
 
-  // Current values
-  const latestPh = data.length > 0 ? data[data.length - 1].ph : null
-  const latestEc = data.length > 0 ? data[data.length - 1].ec : null
-  const latestTemp = data.length > 0 ? data[data.length - 1].temperature_c : null
+  const latestPh   = data.length > 0 ? data[data.length - 1].ph : null
+  const latestEc   = data.length > 0 ? data[data.length - 1].ec_mS_cm : null
+  const latestTemp = data.length > 0 ? data[data.length - 1].temperature_C : null
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -107,7 +107,7 @@ export default function NutrientHistory() {
           )}
         </div>
         <div className="pill-group">
-          {['24h', '7d', '30d'].map(r => (
+          {['1h', '24h', '7d', '30d'].map(r => (
             <button key={r} className={`pill-btn ${range === r ? 'active' : ''}`}
               onClick={() => setRange(r)}>
               {r.toUpperCase()}
@@ -140,6 +140,15 @@ export default function NutrientHistory() {
             <ChartArea points={ecPoints} color={COLORS.ec} yMin={0} yMax={4} label="EC"/>
           </div>
 
+          {/* Temperature Chart */}
+          <div className="card">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+              <div style={{ width: 10, height: 10, borderRadius: '50%', background: COLORS.temp }}/>
+              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-secondary)' }}>Temperature History (\u00b0C)</span>
+            </div>
+            <ChartArea points={tempPoints} color={COLORS.temp} yMin={10} yMax={35} label="\u00b0C"/>
+          </div>
+
           {/* Readings table */}
           <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
             <div style={{ padding: '18px 24px 0', fontSize: 14, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 14 }}>
@@ -148,7 +157,7 @@ export default function NutrientHistory() {
             <table className="data-table">
               <thead>
                 <tr>
-                  {['Time', 'pH', 'EC (mS/cm)', 'Temp (\u00b0C)', 'Stage'].map(h => (
+                  {['Time', 'pH', 'EC (mS/cm)', 'Temp (\u00b0C)'].map(h => (
                     <th key={h}>{h}</th>
                   ))}
                 </tr>
@@ -160,9 +169,8 @@ export default function NutrientHistory() {
                       {new Date(d.timestamp).toLocaleTimeString()}
                     </td>
                     <td style={{ fontWeight: 600, color: COLORS.ph }}>{d.ph?.toFixed(2) ?? '--'}</td>
-                    <td style={{ fontWeight: 600, color: COLORS.ec }}>{d.ec?.toFixed(2) ?? '--'}</td>
-                    <td>{d.temperature_c?.toFixed(1) ?? '--'}</td>
-                    <td style={{ color: 'var(--text-muted)', textTransform: 'capitalize' }}>{d.growth_stage ?? '--'}</td>
+                    <td style={{ fontWeight: 600, color: COLORS.ec }}>{d.ec_mS_cm?.toFixed(2) ?? '--'}</td>
+                    <td style={{ color: 'var(--orange)' }}>{d.temperature_C?.toFixed(1) ?? '--'}</td>
                   </tr>
                 ))}
               </tbody>

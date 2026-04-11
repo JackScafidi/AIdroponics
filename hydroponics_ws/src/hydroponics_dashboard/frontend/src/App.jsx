@@ -88,30 +88,28 @@ const NAV_ITEMS = [
   { id: 'dashboard',  label: 'Dashboard',  icon: Icons.dashboard },
   { id: 'sensors',    label: 'Sensors',    icon: Icons.sensors },
   { id: 'analytics',  label: 'Analytics',  icon: Icons.analytics },
-  { id: 'nutrients',  label: 'Nutrients',  icon: Icons.nutrients },
+  { id: 'nutrients',  label: 'Dosing',     icon: Icons.nutrients },
   { id: 'controls',   label: 'Controls',   icon: Icons.controls },
 ]
 
 const PAGE_META = {
-  dashboard:  { title: 'AIdroponics', accent: 'Dashboard', subtitle: 'Module 1 \u2014 Parsley Channel \u2014 Day 34 of Cycle' },
-  sensors:    { title: 'System',      accent: 'Sensors',   subtitle: 'Real-time pH, EC, temperature, and pump monitoring' },
-  analytics:  { title: 'Growth',      accent: 'Analytics',  subtitle: 'Plant growth curves, yield statistics, and inspection history', tabs: ['Growth Curves', 'Yield Report', 'Plant Health'] },
-  nutrients:  { title: 'Nutrient',    accent: 'History',   subtitle: 'Dosing history and water chemistry log' },
-  controls:   { title: 'System',      accent: 'Controls',  subtitle: 'Manual overrides, behavior tree status, and plant profiles', tabs: ['Controls', 'BT Status', 'Profiles', 'Alerts'] },
+  dashboard:  { title: 'AIdroponics', accent: 'Dashboard', subtitle: 'V0.1 Single-Plant \u2014 NDVI + RGB Vision \u00b7 Auto-Dosing \u00b7 Water Management' },
+  sensors:    { title: 'System',      accent: 'Sensors',   subtitle: 'Real-time pH, EC, temperature, NDVI, and water level' },
+  analytics:  { title: 'Plant',       accent: 'Analytics', subtitle: 'NDVI trends, vision measurements, and water consumption', tabs: ['NDVI Trends', 'Plant Health', 'Water & Dosing'] },
+  nutrients:  { title: 'Probe &',     accent: 'Dosing',    subtitle: 'Probe reading history and auto-dosing event log' },
+  controls:   { title: 'System',      accent: 'Controls',  subtitle: 'Manual triggers, diagnostic report, plant profiles, and alerts', tabs: ['Controls', 'Diagnostics', 'Profiles', 'Alerts'] },
 }
 
 export default function App() {
 
 
-  // --- ADD THIS SECTION ---
+  // --- Google Font injection ---
   useEffect(() => {
-    // 1. Inject the Google Font Link
     const link = document.createElement('link');
     link.rel = 'stylesheet';
     link.href = 'https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@400;600;700&display=swap';
     document.head.appendChild(link);
 
-    // 2. Inject a global style tag to force the font on EVERYTHING
     const style = document.createElement('style');
     style.innerHTML = `
       * {
@@ -122,40 +120,33 @@ export default function App() {
   }, []);
 
 
-
-
-
-  
-  const [page, setPage]                   = useState('home')
-  const [activeTab, setActiveTab]         = useState(0)
-  const [connected, setConnected]         = useState(false)
-  const [nutrientStatus, setNutrient]     = useState(null)
-  const [inspectionResult, setInspection] = useState(null)
-  const [transportStatus, setTransport]   = useState(null)
-  const [harvestEvents, setHarvest]       = useState([])
-  const [alerts, setAlerts]               = useState([])
-  const [btStatus, setBt]                 = useState(null)
-  const [channelHealth, setChannel]       = useState(null)
-  const [unreadAlerts, setUnread]         = useState(0)
-  const [sidebarHover, setSidebarHover]   = useState(null)
+  const [page, setPage]                     = useState('home')
+  const [activeTab, setActiveTab]           = useState(0)
+  const [connected, setConnected]           = useState(false)
+  const [probeReading, setProbeReading]     = useState(null)
+  const [ndviReading, setNdviReading]       = useState(null)
+  const [plantMeasurement, setPlantMeasurement] = useState(null)
+  const [waterLevel, setWaterLevel]         = useState(null)
+  const [plantStatus, setPlantStatus]       = useState(null)
+  const [diagnosticReport, setDiagnosticReport] = useState(null)
+  const [alerts, setAlerts]                 = useState([])
+  const [unreadAlerts, setUnread]           = useState(0)
+  const [sidebarHover, setSidebarHover]     = useState(null)
   const [dropletsVisible, setDropletsVisible] = useState(false)
-  const [authToken, setAuthToken]         = useState(() => localStorage.getItem('aidroponics_auth_token'))
-
-  // REMOVED: const [now, setNow] (The Phantom Clock CPU drain)
+  const [authToken, setAuthToken]           = useState(() => localStorage.getItem('aidroponics_auth_token'))
 
   const wsRef = useRef(null)
   const reconnectTimer = useRef(null)
-  
-  // NEW: WebSocket Buffer for Raspberry Pi CPU optimization
+
+  // WebSocket buffer for Raspberry Pi CPU optimisation
   const wsBuffer = useRef({
     alerts: [],
-    harvests: [],
     scalar: {}
   })
 
   const connect = useCallback(() => {
     const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws'
-    const ws = new WebSocket(`${protocol}://${window.location.host}/ws`)
+    const ws = new WebSocket(`${protocol}://${window.location.host}/ws/stream`)
     wsRef.current = ws
     ws.onopen  = () => { setConnected(true);  if (reconnectTimer.current) clearTimeout(reconnectTimer.current) }
     ws.onclose = () => { setConnected(false); reconnectTimer.current = setTimeout(connect, 3000) }
@@ -163,11 +154,17 @@ export default function App() {
     ws.onmessage = (evt) => {
       try {
         const { type, data } = JSON.parse(evt.data)
-        // Store data silently in the buffer instead of triggering React re-renders instantly
-        if (type === 'harvest_event') {
-          wsBuffer.current.harvests.push(data)
-        } else if (type === 'alert') {
+        if (type === 'system_alert') {
           wsBuffer.current.alerts.push(data)
+        } else if (type === 'snapshot') {
+          // Unpack snapshot into scalar buffer
+          Object.entries(data).forEach(([k, v]) => {
+            if (k === 'alerts') {
+              if (Array.isArray(v) && v.length > 0) wsBuffer.current.alerts.push(...v)
+            } else if (v != null) {
+              wsBuffer.current.scalar[k] = v
+            }
+          })
         } else {
           wsBuffer.current.scalar[type] = data
         }
@@ -180,33 +177,27 @@ export default function App() {
     return () => { wsRef.current?.close(); if (reconnectTimer.current) clearTimeout(reconnectTimer.current) }
   }, [connect])
 
-  // NEW: Flush the WebSocket buffer to React state at a safe 1Hz frame rate
+  // Flush WS buffer to React state at 1 Hz
   useEffect(() => {
     const timer = setInterval(() => {
-      const { alerts: newAlerts, harvests: newHarvests, scalar } = wsBuffer.current
-      
-      // Update individual states only if new data arrived
-      if (scalar.nutrient_status) setNutrient(scalar.nutrient_status)
-      if (scalar.inspection_result) setInspection(scalar.inspection_result)
-      if (scalar.transport_status) setTransport(scalar.transport_status)
-      if (scalar.bt_status) setBt(scalar.bt_status)
-      if (scalar.channel_health) setChannel(scalar.channel_health)
-      
-      // Batch array updates
-      if (newHarvests.length > 0) {
-        setHarvest(prev => [...newHarvests, ...prev].slice(0, 50))
-        wsBuffer.current.harvests = [] // Clear buffer
-      }
+      const { alerts: newAlerts, scalar } = wsBuffer.current
+
+      if (scalar.probe_reading)    setProbeReading(scalar.probe_reading)
+      if (scalar.ndvi_reading)     setNdviReading(scalar.ndvi_reading)
+      if (scalar.plant_measurement) setPlantMeasurement(scalar.plant_measurement)
+      if (scalar.water_level)      setWaterLevel(scalar.water_level)
+      if (scalar.plant_status)     setPlantStatus(scalar.plant_status)
+      if (scalar.diagnostic_report) setDiagnosticReport(scalar.diagnostic_report)
+
       if (newAlerts.length > 0) {
         setAlerts(prev => [...newAlerts, ...prev].slice(0, 200))
         setUnread(n => n + newAlerts.length)
-        wsBuffer.current.alerts = [] // Clear buffer
+        wsBuffer.current.alerts = []
       }
-      
-      // Clear scalar buffer
+
       wsBuffer.current.scalar = {}
-    }, 1000) // 1000ms ensures Pi doesn't get overwhelmed
-    
+    }, 1000)
+
     return () => clearInterval(timer)
   }, [])
 
@@ -249,9 +240,8 @@ export default function App() {
   }, [page, activeTab])
 
   const handleNav = (id) => {
-    if (page === id) return // FIX: Prevent double-tap bug
-    
-    setDropletsVisible(false) 
+    if (page === id) return
+    setDropletsVisible(false)
     setPage(id)
     setActiveTab(0)
     if (id === 'controls') setUnread(0)
@@ -280,15 +270,25 @@ export default function App() {
   const renderPage = () => {
     switch (page) {
       case 'dashboard':
-        return <Dashboard transportStatus={transportStatus} channelHealth={channelHealth}
-          harvestEvents={harvestEvents} nutrientStatus={nutrientStatus} btStatus={btStatus} alerts={alerts}/>
+        return <Dashboard
+          probeReading={probeReading}
+          ndviReading={ndviReading}
+          waterLevel={waterLevel}
+          plantStatus={plantStatus}
+          diagnosticReport={diagnosticReport}
+          alerts={alerts}
+        />
       case 'sensors':
-        return <SensorGauges nutrientStatus={nutrientStatus}/>
+        return <SensorGauges
+          probeReading={probeReading}
+          ndviReading={ndviReading}
+          waterLevel={waterLevel}
+        />
       case 'analytics':
         switch (activeTab) {
-          case 0: return <GrowthCurves harvestEvents={harvestEvents} inspectionResult={inspectionResult}/>
-          case 1: return <YieldAnalytics/>
-          case 2: return <InspectionViewer inspectionResult={inspectionResult}/>
+          case 0: return <GrowthCurves/>
+          case 1: return <InspectionViewer plantMeasurement={plantMeasurement} ndviReading={ndviReading} authToken={authToken}/>
+          case 2: return <YieldAnalytics/>
           default: return null
         }
       case 'nutrients':
@@ -296,7 +296,7 @@ export default function App() {
       case 'controls':
         switch (activeTab) {
           case 0: return <SystemControls authToken={authToken} onLogin={handleLogin} onLogout={handleLogout}/>
-          case 1: return <BehaviorTreeStatus btStatus={btStatus}/>
+          case 1: return <BehaviorTreeStatus diagnosticReport={diagnosticReport}/>
           case 2: return <PlantProfileEditor/>
           case 3: return <AlertPanel alerts={alerts}/>
           default: return null
@@ -306,7 +306,6 @@ export default function App() {
   }
 
   return (
-    
     <div style={{ display: 'flex', height: '100vh', width: '100vw', overflow: 'hidden' }}>
 
       {/* ── Sidebar ──────────────────────────────────────────────────────── */}
@@ -438,7 +437,7 @@ export default function App() {
       <div style={{
         flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative',
         background: 'linear-gradient(145deg, #161310 0%, #1c1915 30%, #201c16 50%, #181510 75%, #121010 100%)',
-        isolation: 'isolate' 
+        isolation: 'isolate'
       }}>
 
         {/* Animated rain decorations */}
@@ -450,7 +449,6 @@ export default function App() {
           willChange: 'opacity',
           transform: 'translateZ(0)'
         }}>
-            {/* Falling rain droplets */}
             {rainDrops.map((drop, i) => (
               <svg key={i} width={drop.size} height={drop.size * 1.38} viewBox="0 0 80 110" style={{
                 position: 'absolute', left: `${drop.x}%`, top: 0, opacity: 0,
@@ -460,7 +458,6 @@ export default function App() {
                 <path d="M40 0C40 0 0 40 0 70a40 40 0 0 0 80 0C80 40 40 0 40 0Z" fill={drop.color}/>
               </svg>
             ))}
-            {/* Warm radial glows */}
             <div style={{
               position: 'absolute', top: '5%', right: '15%',
               width: 500, height: 500, borderRadius: '50%',
@@ -478,9 +475,10 @@ export default function App() {
           <HomePage
             onNavigate={handleNav}
             connected={connected}
-            nutrientStatus={nutrientStatus}
-            channelHealth={channelHealth}
-            harvestEvents={harvestEvents}
+            probeReading={probeReading}
+            ndviReading={ndviReading}
+            waterLevel={waterLevel}
+            plantStatus={plantStatus}
           />
         )}
 
@@ -546,8 +544,8 @@ export default function App() {
                   {meta.tabs.map((tab, i) => (
                     <button key={tab} className={`tab-btn ${activeTab === i ? 'active' : ''}`}
                       onClick={() => {
-                        if (activeTab === i) return // FIX: Prevent double-tap bug on tabs
-                        setDropletsVisible(false) 
+                        if (activeTab === i) return
+                        setDropletsVisible(false)
                         setActiveTab(i)
                       }}>
                       {tab}

@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react'
 
-const COLORS = ['#3b82f6', '#16a34a', '#f59e0b', '#8b5cf6']
+const NDVI_COLOR = '#16a34a'
+const NDVI_GRAD  = '#3b82f6'
 
 function SVGLineChart({ series, yLabel = '' }) {
   if (!series || series.every(s => s.points.length === 0)) {
     return (
       <div style={{ height: 280, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
-        No growth data available
+        No NDVI data available
       </div>
     )
   }
@@ -18,16 +19,19 @@ function SVGLineChart({ series, yLabel = '' }) {
   const allPoints = series.flatMap(s => s.points)
   const xs = allPoints.map(p => p.x), ys = allPoints.map(p => p.y)
   const minX = Math.min(...xs), maxX = Math.max(...xs)
-  const maxY = Math.max(...ys) * 1.12 || 1
+  const maxY = Math.max(1, Math.max(...ys) * 1.12)
 
   const px = x => PAD.l + ((x - minX) / (maxX - minX || 1)) * cW
   const py = y => PAD.t + cH - (y / maxY) * cH
 
-  const yTicks = [0, 0.25, 0.5, 0.75, 1].map(f => f * maxY)
+  const yTicks = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.8, 1.0].filter(v => v <= maxY * 1.05)
+  const xTicks = [0, 0.25, 0.5, 0.75, 1].map(f => minX + f * (maxX - minX))
 
-  // Time labels
-  const timeRange = maxX - minX
-  const xTicks = [0, 0.25, 0.5, 0.75, 1].map(f => minX + f * timeRange)
+  // Threshold reference lines
+  const thresholds = [
+    { value: 0.3, label: 'Healthy', color: 'rgba(22,163,74,0.4)' },
+    { value: 0.2, label: 'Warning', color: 'rgba(245,158,11,0.4)' },
+  ]
 
   return (
     <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ overflow: 'visible' }}>
@@ -38,7 +42,18 @@ function SVGLineChart({ series, yLabel = '' }) {
             stroke="var(--border)" strokeWidth="1"/>
           <text x={PAD.l - 10} y={py(v) + 4} textAnchor="end" fontSize="10"
             fill="var(--text-muted)" fontFamily="Inter, sans-serif">
-            {v.toFixed(0)}
+            {v.toFixed(1)}
+          </text>
+        </g>
+      ))}
+      {/* Threshold reference lines */}
+      {thresholds.map((t, i) => t.value <= maxY && (
+        <g key={`t-${i}`}>
+          <line x1={PAD.l} y1={py(t.value)} x2={PAD.l + cW} y2={py(t.value)}
+            stroke={t.color} strokeWidth="1.5" strokeDasharray="6 4"/>
+          <text x={PAD.l + cW + 6} y={py(t.value) + 4} fontSize="9"
+            fill={t.color} fontFamily="Inter, sans-serif" fontWeight="600">
+            {t.label}
           </text>
         </g>
       ))}
@@ -57,23 +72,24 @@ function SVGLineChart({ series, yLabel = '' }) {
       {/* Series with area fill */}
       {series.map((s, si) => {
         if (s.points.length < 2) return null
+        const COLORS = [NDVI_COLOR, NDVI_GRAD, '#f59e0b', '#8b5cf6']
+        const col = COLORS[si % COLORS.length]
         const d = s.points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${px(p.x)} ${py(p.y)}`).join(' ')
         const areaD = d + ` L ${px(s.points[s.points.length - 1].x)} ${PAD.t + cH} L ${px(s.points[0].x)} ${PAD.t + cH} Z`
-        const gradId = `growth-grad-${si}`
+        const gradId = `ndvi-grad-${si}`
         return (
           <g key={si}>
             <defs>
               <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={COLORS[si]} stopOpacity="0.15"/>
-                <stop offset="100%" stopColor={COLORS[si]} stopOpacity="0.01"/>
+                <stop offset="0%" stopColor={col} stopOpacity="0.15"/>
+                <stop offset="100%" stopColor={col} stopOpacity="0.01"/>
               </linearGradient>
             </defs>
             <path d={areaD} fill={`url(#${gradId})`}/>
-            <path d={d} fill="none" stroke={COLORS[si]} strokeWidth="2.5" strokeLinejoin="round"/>
-            {/* End dot */}
+            <path d={d} fill="none" stroke={col} strokeWidth="2.5" strokeLinejoin="round"/>
             {s.points.length > 0 && (
               <circle cx={px(s.points[s.points.length - 1].x)} cy={py(s.points[s.points.length - 1].y)}
-                r="4" fill={COLORS[si]} stroke="#1c1915" strokeWidth="2"/>
+                r="4" fill={col} stroke="#1c1915" strokeWidth="2"/>
             )}
           </g>
         )
@@ -85,35 +101,37 @@ function SVGLineChart({ series, yLabel = '' }) {
 export default function GrowthCurves() {
   const [data, setData]       = useState([])
   const [range, setRange]     = useState('7d')
-  const [selected, setSelc]   = useState('all')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     setLoading(true)
-    fetch(`/api/growth_data?range=${range}`)
+    fetch(`/api/ndvi_history?range=${range}`)
       .then(r => r.json())
-      .then(d => { setData(d?.data ?? []); setLoading(false) })
+      .then(d => { setData(d?.readings ?? []); setLoading(false) })
       .catch(() => setLoading(false))
   }, [range])
 
-  const series = [0, 1, 2, 3].map(pos => ({
-    label: `Position ${pos}`,
+  const meanSeries = {
+    label: 'Mean NDVI',
     points: data
-      .filter(d => d.position_index === pos)
-      .map(d => ({ x: new Date(d.timestamp).getTime(), y: d.canopy_area_cm2 ?? 0 }))
+      .filter(d => d.mean_ndvi != null)
+      .map(d => ({ x: new Date(d.timestamp).getTime(), y: d.mean_ndvi }))
       .sort((a, b) => a.x - b.x),
-  }))
+  }
 
-  const visibleSeries = selected === 'all' ? series : [series[parseInt(selected)]]
+  const medianSeries = {
+    label: 'Median NDVI',
+    points: data
+      .filter(d => d.median_ndvi != null)
+      .map(d => ({ x: new Date(d.timestamp).getTime(), y: d.median_ndvi }))
+      .sort((a, b) => a.x - b.x),
+  }
 
-  // Compute stats
-  const latestValues = series.map(s => s.points.length > 0 ? s.points[s.points.length - 1].y : 0)
-  const avgGrowth = series.map(s => {
-    if (s.points.length < 2) return 0
-    const first = s.points[0].y, last = s.points[s.points.length - 1].y
-    const days = (s.points[s.points.length - 1].x - s.points[0].x) / (1000 * 60 * 60 * 24)
-    return days > 0 ? (last - first) / days : 0
-  })
+  // Stats
+  const latest = meanSeries.points[meanSeries.points.length - 1]?.y ?? null
+  const first  = meanSeries.points[0]?.y ?? null
+  const trend  = latest != null && first != null ? latest - first : null
+  const latestStdDev = data.length > 0 ? data[data.length - 1]?.std_dev_ndvi : null
 
   return (
     <div style={{ display: 'flex', gap: 20 }}>
@@ -122,22 +140,15 @@ export default function GrowthCurves() {
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
             <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-secondary)' }}>
-              Canopy Area (cm\u00b2) — {selected === 'all' ? 'All Positions' : `Position ${selected}`}
+              NDVI Trend
             </div>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <select value={selected} onChange={e => setSelc(e.target.value)}
-                style={{ padding: '5px 10px', fontSize: 12 }}>
-                <option value="all">All Positions</option>
-                {[0, 1, 2, 3].map(i => <option key={i} value={i}>Position {i}</option>)}
-              </select>
-              <div className="pill-group">
-                {['7d', '30d', 'all'].map(r => (
-                  <button key={r} className={`pill-btn ${range === r ? 'active' : ''}`}
-                    onClick={() => setRange(r)}>
-                    {r.toUpperCase()}
-                  </button>
-                ))}
-              </div>
+            <div className="pill-group">
+              {['7d', '30d', 'all'].map(r => (
+                <button key={r} className={`pill-btn ${range === r ? 'active' : ''}`}
+                  onClick={() => setRange(r)}>
+                  {r.toUpperCase()}
+                </button>
+              ))}
             </div>
           </div>
           {loading ? (
@@ -145,18 +156,23 @@ export default function GrowthCurves() {
               <span className="loading-pulse" style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading data...</span>
             </div>
           ) : (
-            <SVGLineChart series={visibleSeries} yLabel="cm\u00b2"/>
+            <SVGLineChart series={[meanSeries, medianSeries]} yLabel="NDVI"/>
           )}
           {/* Legend */}
           <div style={{ display: 'flex', gap: 20, marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
-            {series.map((s, i) => (
-              (selected === 'all' || parseInt(selected) === i) && (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
-                  <div style={{ width: 12, height: 3, borderRadius: 2, background: COLORS[i] }}/>
-                  <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{s.label}</span>
-                </div>
-              )
+            {[
+              { label: 'Mean NDVI', color: NDVI_COLOR },
+              { label: 'Median NDVI', color: NDVI_GRAD },
+            ].map(({ label, color }) => (
+              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
+                <div style={{ width: 12, height: 3, borderRadius: 2, background: color }}/>
+                <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{label}</span>
+              </div>
             ))}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
+              <div style={{ width: 12, height: 2, borderRadius: 2, background: 'rgba(22,163,74,0.6)', borderTop: '1px dashed rgba(22,163,74,0.6)' }}/>
+              <span style={{ color: 'var(--text-muted)' }}>Healthy threshold (0.3)</span>
+            </div>
           </div>
         </div>
       </div>
@@ -165,34 +181,46 @@ export default function GrowthCurves() {
       <div style={{ width: 200, display: 'flex', flexDirection: 'column', gap: 12, flexShrink: 0 }}>
         <div className="card" style={{ padding: 18 }}>
           <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 6 }}>
-            Avg Growth
+            Latest NDVI
           </div>
-          <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--accent)', letterSpacing: '-0.02em' }}>
-            {avgGrowth.reduce((a, b) => a + b, 0) > 0
-              ? `${(avgGrowth.reduce((a, b) => a + b, 0) / avgGrowth.filter(a => a > 0).length).toFixed(1)} cm\u00b2/d`
-              : '-- cm\u00b2/d'}
+          <div style={{
+            fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em',
+            color: latest == null ? 'var(--text-muted)' : latest >= 0.3 ? 'var(--accent)' : latest >= 0.2 ? 'var(--yellow)' : 'var(--red)',
+          }}>
+            {latest != null ? latest.toFixed(3) : '--'}
           </div>
-          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>per day average</div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>mean NDVI</div>
         </div>
-        {series.map((s, i) => (
-          <div key={i} className="card" style={{ padding: 18 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-              <div style={{ width: 8, height: 8, borderRadius: '50%', background: COLORS[i] }}/>
-              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
-                Pos {i}
-              </span>
-            </div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>
-              {latestValues[i] > 0 ? `${latestValues[i].toFixed(1)}` : '--'}
-              <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-muted)', marginLeft: 4 }}>cm\u00b2</span>
-            </div>
-            {avgGrowth[i] > 0 && (
-              <div style={{ fontSize: 11, color: 'var(--accent)', marginTop: 2 }}>
-                +{avgGrowth[i].toFixed(2)} cm\u00b2/d
-              </div>
-            )}
+        <div className="card" style={{ padding: 18 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 6 }}>
+            Range Change
           </div>
-        ))}
+          <div style={{
+            fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em',
+            color: trend == null ? 'var(--text-muted)' : trend >= 0 ? 'var(--accent)' : 'var(--red)',
+          }}>
+            {trend != null ? `${trend >= 0 ? '+' : ''}${trend.toFixed(3)}` : '--'}
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>over {range}</div>
+        </div>
+        <div className="card" style={{ padding: 18 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 6 }}>
+            Std Deviation
+          </div>
+          <div style={{ fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--blue)' }}>
+            {latestStdDev != null ? latestStdDev.toFixed(3) : '--'}
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>spatial variation</div>
+        </div>
+        <div className="card" style={{ padding: 18 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 6 }}>
+            Readings
+          </div>
+          <div style={{ fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
+            {data.length}
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>in range</div>
+        </div>
       </div>
     </div>
   )

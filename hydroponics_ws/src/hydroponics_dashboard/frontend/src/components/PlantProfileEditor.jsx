@@ -1,54 +1,47 @@
 import React, { useState, useEffect } from 'react'
 
-const PROFILES = ['parsley', 'basil', 'cilantro', 'mint']
-const STAGES   = ['seedling', 'vegetative', 'mature']
+const PROFILES = ['basil', 'mint', 'parsley', 'rosemary']
 
 const PROFILE_ICONS = {
-  parsley:  '\u{1F33F}',
   basil:    '\u{1F33F}',
-  cilantro: '\u{1F331}',
   mint:     '\u{1F343}',
+  parsley:  '\u{1F33F}',
+  rosemary: '\u{1F331}',
+}
+
+function RangeRow({ label, idealMin, idealMax, acceptMin, acceptMax }) {
+  return (
+    <div style={{
+      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+      padding: '8px 0', borderBottom: '1px solid var(--border)',
+    }}>
+      <span style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500, width: 120 }}>{label}</span>
+      <span style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 600 }}>
+        {idealMin} – {idealMax}
+        <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 400, marginLeft: 6 }}>
+          ideal
+        </span>
+      </span>
+      <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+        {acceptMin} – {acceptMax}
+        <span style={{ fontSize: 10, marginLeft: 4 }}>accept</span>
+      </span>
+    </div>
+  )
 }
 
 export default function PlantProfileEditor() {
-  const [selected, setSelected] = useState('parsley')
+  const [selected, setSelected] = useState('basil')
   const [profile, setProfile]   = useState(null)
   const [loading, setLoading]   = useState(true)
-  const [saved, setSaved]       = useState(false)
 
   useEffect(() => {
     setLoading(true)
-    setSaved(false)
-    fetch(`/api/plant_profiles/${selected}`)
+    fetch(`/api/profiles/${selected}`)
       .then(r => r.json())
       .then(d => { setProfile(d); setLoading(false) })
       .catch(() => setLoading(false))
   }, [selected])
-
-  const save = () => {
-    fetch(`/api/plant_profiles/${selected}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(profile),
-    }).then(() => { setSaved(true); setTimeout(() => setSaved(false), 3000) })
-  }
-
-  const resetDefaults = () => {
-    fetch(`/api/plant_profiles/${selected}/reset`, { method: 'POST' })
-      .then(r => r.json())
-      .then(d => { setProfile(d); setSaved(false) })
-  }
-
-  const setVal = (path, val) => {
-    setProfile(prev => {
-      const next = JSON.parse(JSON.stringify(prev))
-      const keys = path.split('.')
-      let obj = next
-      for (let i = 0; i < keys.length - 1; i++) obj = obj[keys[i]]
-      obj[keys[keys.length - 1]] = val
-      return next
-    })
-  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -77,99 +70,103 @@ export default function PlantProfileEditor() {
         </div>
       ) : (
         <>
-          {/* pH Targets */}
+          {/* Header */}
+          <div className="card" style={{ padding: '20px 24px' }}>
+            <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>
+              {profile.display_name ?? profile.name}
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+              A:B nutrient ratio — {profile.nutrient_ab_ratio ?? 1.0}:1
+            </div>
+          </div>
+
+          {/* Water chemistry ranges */}
           <div className="card">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
               <div style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--blue)' }}/>
               <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-secondary)' }}>
-                pH Targets by Stage
+                Water Chemistry
               </span>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
-              {STAGES.map(stage => (
-                <div key={stage}>
-                  <label style={{
-                    display: 'block', fontSize: 11, fontWeight: 600, textTransform: 'uppercase',
-                    letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 8,
-                  }}>
-                    {stage}
-                  </label>
-                  <input type="number" step="0.1" min="4" max="8"
-                    value={profile?.growth_stages?.[stage]?.ph_target ?? 6.2}
-                    onChange={e => setVal(`growth_stages.${stage}.ph_target`, parseFloat(e.target.value))}
-                    style={{ width: '100%' }}/>
-                </div>
-              ))}
+            <RangeRow
+              label="pH"
+              idealMin={profile.ph?.ideal?.[0]}
+              idealMax={profile.ph?.ideal?.[1]}
+              acceptMin={profile.ph?.acceptable?.[0]}
+              acceptMax={profile.ph?.acceptable?.[1]}
+            />
+            <RangeRow
+              label="EC (mS/cm)"
+              idealMin={profile.ec_mS_cm?.ideal?.[0]}
+              idealMax={profile.ec_mS_cm?.ideal?.[1]}
+              acceptMin={profile.ec_mS_cm?.acceptable?.[0]}
+              acceptMax={profile.ec_mS_cm?.acceptable?.[1]}
+            />
+            <div style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              padding: '8px 0',
+            }}>
+              <span style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500, width: 120 }}>Temp (\u00b0C)</span>
+              <span style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 600 }}>
+                {profile.temperature_C?.ideal?.[0]} – {profile.temperature_C?.ideal?.[1]}
+                <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 400, marginLeft: 6 }}>ideal</span>
+              </span>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                {profile.temperature_C?.acceptable?.[0]} – {profile.temperature_C?.acceptable?.[1]}
+                <span style={{ fontSize: 10, marginLeft: 4 }}>accept</span>
+              </span>
             </div>
           </div>
 
-          {/* EC Targets */}
+          {/* NDVI thresholds */}
           <div className="card">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
               <div style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--accent)' }}/>
               <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-secondary)' }}>
-                EC Targets by Stage (mS/cm)
+                NDVI Thresholds
               </span>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
-              {STAGES.map(stage => (
-                <div key={stage}>
-                  <label style={{
-                    display: 'block', fontSize: 11, fontWeight: 600, textTransform: 'uppercase',
-                    letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 8,
-                  }}>
-                    {stage}
-                  </label>
-                  <input type="number" step="0.1" min="0" max="4"
-                    value={profile?.growth_stages?.[stage]?.ec_target ?? 1.8}
-                    onChange={e => setVal(`growth_stages.${stage}.ec_target`, parseFloat(e.target.value))}
-                    style={{ width: '100%' }}/>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Harvest Thresholds */}
-          <div className="card">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18 }}>
-              <div style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--yellow)' }}/>
-              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-secondary)' }}>
-                Harvest Thresholds
-              </span>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
               {[
-                { label: 'Min canopy area', unit: 'cm\u00b2', path: 'harvest.min_canopy_area_cm2', min: 0, max: 500, step: 5 },
-                { label: 'Min days between cuts', unit: 'days', path: 'harvest.min_days_between_cuts', min: 1, max: 90, step: 1 },
-                { label: 'Max cut cycles', unit: 'cycles', path: 'harvest.max_cut_cycles', min: 1, max: 10, step: 1 },
-              ].map(({ label, unit, path, min, max, step }) => (
-                <div key={path}>
-                  <label style={{
-                    display: 'block', fontSize: 11, fontWeight: 600, textTransform: 'uppercase',
-                    letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 4,
-                  }}>
+                { label: 'Healthy Min', key: 'healthy_min', color: 'var(--accent)' },
+                { label: 'Warning Threshold', key: 'warning_threshold', color: 'var(--yellow)' },
+                { label: 'Critical Threshold', key: 'critical_threshold', color: 'var(--red)' },
+              ].map(({ label, key, color }) => (
+                <div key={key} style={{
+                  padding: '16px 20px', borderRadius: 'var(--radius-md)',
+                  background: 'rgba(255,248,235,0.03)',
+                  border: `1px solid ${color}22`,
+                }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 6 }}>
                     {label}
-                  </label>
-                  <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 8 }}>{unit}</div>
-                  <input type="number" min={min} max={max} step={step}
-                    value={path.split('.').reduce((o, k) => o?.[k], profile) ?? 0}
-                    onChange={e => setVal(path, parseFloat(e.target.value))}
-                    style={{ width: '100%' }}/>
+                  </div>
+                  <div style={{ fontSize: 22, fontWeight: 700, color }}>
+                    {profile.ndvi?.[key]?.toFixed(2) ?? '--'}
+                  </div>
                 </div>
               ))}
             </div>
+
+            {/* NDVI visual bar */}
+            <div style={{ marginTop: 16 }}>
+              <div style={{ position: 'relative', height: 10, background: 'rgba(255,248,235,0.06)', borderRadius: 'var(--radius-full)', overflow: 'hidden' }}>
+                <div style={{ position: 'absolute', left: 0, top: 0, height: '100%', width: `${(profile.ndvi?.critical_threshold ?? 0.1) * 100}%`, background: 'rgba(239,68,68,0.5)', borderRadius: '6px 0 0 6px' }}/>
+                <div style={{ position: 'absolute', left: `${(profile.ndvi?.critical_threshold ?? 0.1) * 100}%`, top: 0, height: '100%', width: `${((profile.ndvi?.warning_threshold ?? 0.2) - (profile.ndvi?.critical_threshold ?? 0.1)) * 100}%`, background: 'rgba(245,158,11,0.5)' }}/>
+                <div style={{ position: 'absolute', left: `${(profile.ndvi?.warning_threshold ?? 0.2) * 100}%`, top: 0, height: '100%', width: `${((profile.ndvi?.healthy_min ?? 0.3) - (profile.ndvi?.warning_threshold ?? 0.2)) * 100}%`, background: 'rgba(245,158,11,0.3)' }}/>
+                <div style={{ position: 'absolute', left: `${(profile.ndvi?.healthy_min ?? 0.3) * 100}%`, top: 0, height: '100%', right: 0, background: 'rgba(22,163,74,0.4)', borderRadius: '0 6px 6px 0' }}/>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, fontSize: 10, color: 'var(--text-muted)' }}>
+                <span>0.0</span>
+                <span>Critical {profile.ndvi?.critical_threshold?.toFixed(2)}</span>
+                <span>Warning {profile.ndvi?.warning_threshold?.toFixed(2)}</span>
+                <span>Healthy {profile.ndvi?.healthy_min?.toFixed(2)}</span>
+                <span>1.0</span>
+              </div>
+            </div>
           </div>
 
-          {/* Save / Reset */}
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-            <button className="btn-success" onClick={save}
-              style={{ fontSize: 13, padding: '10px 24px' }}>
-              {saved ? '\u2713 Saved' : 'Save Profile'}
-            </button>
-            <button className="btn-ghost" onClick={resetDefaults}
-              style={{ fontSize: 13, padding: '10px 20px' }}>
-              Reset to Defaults
-            </button>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', padding: '0 4px' }}>
+            Profiles are read-only in V0.1. Edit <code style={{ fontFamily: 'monospace', fontSize: 11 }}>plant_library.yaml</code> and restart to change thresholds.
           </div>
         </>
       )}

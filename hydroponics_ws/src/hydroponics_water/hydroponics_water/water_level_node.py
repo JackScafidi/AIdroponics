@@ -140,7 +140,7 @@ class WaterLevelNode(Node):
         self._pub_topoff = self.create_publisher(TopOffEvent, '/water/topoff_event', 10)
         self._pub_error = self.create_publisher(String, '/water/error', 10)
         # Solenoid command (GPIO relay)
-        self._pub_solenoid = self.create_publisher(rclpy.impl.rcutils_logger.RcutilsLogger if False else String, '/solenoid_cmd', 10)
+        self._pub_solenoid = self.create_publisher(String, '/solenoid_cmd', 10)
 
         # --- Service clients ---
         self._probe_trigger_client = self.create_client(

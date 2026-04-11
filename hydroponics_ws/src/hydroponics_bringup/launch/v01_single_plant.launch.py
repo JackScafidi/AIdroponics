@@ -55,6 +55,38 @@ def generate_launch_description() -> LaunchDescription:
 
     plant_type = LaunchConfiguration('plant_type')
 
+    # Load plant thresholds at launch time so they can be injected as parameters.
+    # LaunchConfiguration values are not yet resolved here, so we read the
+    # default / environment-provided value directly.
+    import sys
+    _plant_type_str = 'basil'
+    for arg in sys.argv:
+        if arg.startswith('plant_type:='):
+            _plant_type_str = arg.split(':=', 1)[1]
+            break
+    _plant = _load_plant_library(_plant_type_str)
+    _ph     = _plant.get('ph', {})
+    _ec     = _plant.get('ec_mS_cm', {})
+    _temp   = _plant.get('temperature_C', {})
+    _ndvi   = _plant.get('ndvi', {})
+    _plant_params = {
+        'plant_ph_ideal_min':          float(_ph.get('ideal', [5.5, 6.5])[0]),
+        'plant_ph_ideal_max':          float(_ph.get('ideal', [5.5, 6.5])[1]),
+        'plant_ph_acceptable_min':     float(_ph.get('acceptable', [5.0, 6.8])[0]),
+        'plant_ph_acceptable_max':     float(_ph.get('acceptable', [5.0, 6.8])[1]),
+        'plant_ec_ideal_min':          float(_ec.get('ideal', [1.0, 1.6])[0]),
+        'plant_ec_ideal_max':          float(_ec.get('ideal', [1.0, 1.6])[1]),
+        'plant_ec_acceptable_min':     float(_ec.get('acceptable', [0.8, 2.0])[0]),
+        'plant_ec_acceptable_max':     float(_ec.get('acceptable', [0.8, 2.0])[1]),
+        'plant_temp_ideal_min':        float(_temp.get('ideal', [18, 27])[0]),
+        'plant_temp_ideal_max':        float(_temp.get('ideal', [18, 27])[1]),
+        'plant_temp_acceptable_min':   float(_temp.get('acceptable', [15, 30])[0]),
+        'plant_temp_acceptable_max':   float(_temp.get('acceptable', [15, 30])[1]),
+        'plant_ndvi_healthy_min':      float(_ndvi.get('healthy_min', 0.3)),
+        'plant_ndvi_warning_threshold': float(_ndvi.get('warning_threshold', 0.2)),
+        'plant_nutrient_ab_ratio':     float(_plant.get('nutrient_ab_ratio', 1.0)),
+    }
+
     # ---------------------------------------------------------------------------
     # Package share paths
     # ---------------------------------------------------------------------------
@@ -140,9 +172,8 @@ def generate_launch_description() -> LaunchDescription:
         output='screen',
         parameters=[
             v01_config,
-            # Plant-specific thresholds injected as flat parameters
-            # (launch-time resolved from plant_library.yaml)
             {'plant_type': plant_type},
+            _plant_params,
         ],
     )
 
@@ -156,6 +187,7 @@ def generate_launch_description() -> LaunchDescription:
             v01_config,
             {'rules_config_path': diagnostic_rules},
             {'plant_type': plant_type},
+            _plant_params,
         ],
     )
 

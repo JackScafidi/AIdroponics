@@ -148,7 +148,7 @@ class DosingNode(Node):
         self._pub_dosing_event = self.create_publisher(DosingEvent, '/dosing/event', 10)
         self._pub_error = self.create_publisher(String, '/dosing/error', 10)
         # Pump command (pump_id encoding: see _actuate_pump)
-        self._pub_pump = self.create_publisher(Int32, 'pump_cmd', 10)
+        self._pub_pump = self.create_publisher(Int32, '/pump_cmd', 10)
 
         # --- Subscribers ---
         self._sub_probe = self.create_subscription(

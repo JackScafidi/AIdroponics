@@ -71,12 +71,11 @@ function NavCard({ icon, title, description, onClick }) {
 }
 
 /* ── Main Home Page ──────────────────────────────────────────────────────── */
-export default function HomePage({ onNavigate, connected, nutrientStatus, channelHealth, harvestEvents }) {
-  const ns = nutrientStatus ?? {}
-  const plants = channelHealth?.plants ?? []
-  const healthyCount = plants.filter(p => p?.health_state === 'healthy' || (!p?.health_state && p?.status !== 'EMPTY')).length
-  const totalPlants = plants.filter(p => p?.status && p.status !== 'EMPTY').length
-  const totalYield = harvestEvents?.reduce((s, h) => s + (h.weight_grams ?? 0), 0) ?? 0
+export default function HomePage({ onNavigate, connected, probeReading, ndviReading, waterLevel, plantStatus }) {
+  const pr = probeReading ?? {}
+  const nr = ndviReading ?? {}
+  const wl = waterLevel ?? {}
+  const ps = plantStatus ?? {}
 
   return (
     <div style={{
@@ -186,8 +185,8 @@ export default function HomePage({ onNavigate, connected, nutrientStatus, channe
             fontSize: 18, lineHeight: 1.7, color: 'rgba(255,255,255,0.5)',
             maxWidth: 560, fontWeight: 400, margin: 0,
           }}>
-            AI-powered precision agriculture with real-time monitoring,
-            automated nutrient management, and machine vision plant health analysis.
+            AI-powered precision agriculture with NDVI + RGB dual-camera vision,
+            explicit-chemistry auto-dosing, and reactive water management.
           </p>
 
           {/* CTA */}
@@ -225,12 +224,12 @@ export default function HomePage({ onNavigate, connected, nutrientStatus, channe
               Live System Status
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10 }}>
-              <StatPill label="pH" value={ns.ph_current?.toFixed(2) ?? '--'} color="#3b82f6"/>
-              <StatPill label="EC" value={ns.ec_current ? `${ns.ec_current.toFixed(2)} mS` : '--'} color="#16a34a"/>
-              <StatPill label="Temp" value={ns.temperature_c ? `${ns.temperature_c.toFixed(1)}\u00b0C` : '--'} color="#f97316"/>
-              <StatPill label="Plants" value={totalPlants > 0 ? `${healthyCount}/${totalPlants}` : '--'} color="#4ade80"/>
-              <StatPill label="Yield" value={totalYield > 0 ? `${totalYield.toFixed(1)}g` : '--'} color="#8b5cf6"/>
-              <StatPill label="Stage" value={ns.growth_stage ?? '--'} color="#14b8a6"/>
+              <StatPill label="pH"        value={pr.ph?.toFixed(2) ?? '--'}                          color="#3b82f6"/>
+              <StatPill label="EC"        value={pr.ec_mS_cm ? `${pr.ec_mS_cm.toFixed(2)} mS` : '--'} color="#16a34a"/>
+              <StatPill label="Temp"      value={pr.temperature_C ? `${pr.temperature_C.toFixed(1)}\u00b0C` : '--'} color="#f97316"/>
+              <StatPill label="NDVI"      value={nr.mean_ndvi?.toFixed(3) ?? '--'}                   color="#4ade80"/>
+              <StatPill label="Water"     value={wl.level_percent != null ? `${wl.level_percent.toFixed(0)}%` : '--'} color="#2dd4bf"/>
+              <StatPill label="Status"    value={ps.summary ?? '--'}                                  color="#14b8a6"/>
             </div>
           </GlassCard>
         </div>
@@ -253,7 +252,7 @@ export default function HomePage({ onNavigate, connected, nutrientStatus, channe
                 </svg>
               }
               title="Dashboard"
-              description="System overview, KPIs, rail position, and plant status"
+              description="NDVI health, water level, probe readings, and diagnostic summary"
             />
             <NavCard
               onClick={() => onNavigate('sensors')}
@@ -263,7 +262,7 @@ export default function HomePage({ onNavigate, connected, nutrientStatus, channe
                 </svg>
               }
               title="Sensors"
-              description="Real-time pH, EC, temperature gauges and pump monitoring"
+              description="Real-time pH, EC, temperature, NDVI, and water level gauges"
             />
             <NavCard
               onClick={() => onNavigate('analytics')}
@@ -273,7 +272,7 @@ export default function HomePage({ onNavigate, connected, nutrientStatus, channe
                 </svg>
               }
               title="Analytics"
-              description="Growth curves, yield reports, and plant health trends"
+              description="NDVI trends, vision measurements, and water consumption"
             />
             <NavCard
               onClick={() => onNavigate('nutrients')}
@@ -282,8 +281,8 @@ export default function HomePage({ onNavigate, connected, nutrientStatus, channe
                   <path d="M12 2c0 0-8 4-8 10a8 8 0 0 0 16 0c0-6-8-10-8-10z"/><path d="M12 22v-6"/><path d="M9 16l3-3 3 3"/>
                 </svg>
               }
-              title="Nutrients"
-              description="Dosing history, pH/EC trends, and water chemistry"
+              title="Dosing"
+              description="Probe history, pH/EC trends, and auto-dosing event log"
             />
             <NavCard
               onClick={() => onNavigate('controls')}
@@ -294,7 +293,7 @@ export default function HomePage({ onNavigate, connected, nutrientStatus, channe
                 </svg>
               }
               title="Controls"
-              description="Transport, dosing, BT status, profiles, and alerts"
+              description="Probe, aeration, vision triggers, diagnostics, and profiles"
             />
           </div>
         </div>
@@ -306,10 +305,10 @@ export default function HomePage({ onNavigate, connected, nutrientStatus, channe
           flexWrap: 'wrap', gap: 16,
         }}>
           <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)' }}>
-            ROS2 Humble &middot; BehaviorTree.CPP &middot; YOLOv8 Vision &middot; PID Control
+            ROS2 Humble &middot; NDVI + RGB Vision &middot; Explicit-Chemistry Dosing &middot; ESP32 micro-ROS
           </div>
           <div style={{ display: 'flex', gap: 20 }}>
-            {['Station-based Architecture', 'Linear Rail Transport', 'Auto Harvesting'].map(t => (
+            {['Single-Plant V0.1', 'Dual-Camera NDVI', 'Auto Water Management'].map(t => (
               <span key={t} style={{
                 fontSize: 11, color: 'rgba(255,255,255,0.3)', fontWeight: 500,
                 padding: '4px 12px', borderRadius: 20,

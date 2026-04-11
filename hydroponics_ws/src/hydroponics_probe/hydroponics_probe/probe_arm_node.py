@@ -101,15 +101,15 @@ class ProbeArmNode(Node):
 
         # --- Sensor subscribers ---
         self._sub_ph = self.create_subscription(
-            Float32, 'ph_raw', self._ph_callback, 10,
+            Float32, '/ph_raw', self._ph_callback, 10,
             callback_group=self._cb_group
         )
         self._sub_ec = self.create_subscription(
-            Float32, 'ec_raw', self._ec_callback, 10,
+            Float32, '/ec_raw', self._ec_callback, 10,
             callback_group=self._cb_group
         )
         self._sub_temp = self.create_subscription(
-            Float32, 'temperature', self._temp_callback, 10,
+            Float32, '/temperature', self._temp_callback, 10,
             callback_group=self._cb_group
         )
 

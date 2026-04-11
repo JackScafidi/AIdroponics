@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 
-/* ── Transport/Action button row (matching mockup 3) ─────────────────────── */
+/* ── Action button row ───────────────────────────────────────────────────── */
 function ActionRow({ icon, label, active, onClick, variant = 'default' }) {
   return (
     <button
@@ -25,20 +25,6 @@ function ActionRow({ icon, label, active, onClick, variant = 'default' }) {
   )
 }
 
-/* ── Icons ────────────────────────────────────────────────────────────────── */
-const TransportIcons = {
-  WORK: '\u{1F527}',     // wrench
-  GROW: '\u{1F331}',     // seedling
-  INSPECT: '\u{1F50D}',  // magnifying glass
-  HOME: '\u{1F3E0}',     // home
-}
-
-const ActionIcons = {
-  inspect: '\u{1F50E}',  // magnifying glass tilted
-  harvest: '\u2702',      // scissors
-  dose: '\u{1F9EA}',     // test tube
-}
-
 export default function SystemControls({ authToken, onLogin, onLogout }) {
   const [password, setPassword] = useState('')
   const [loginError, setLoginError] = useState('')
@@ -46,11 +32,10 @@ export default function SystemControls({ authToken, onLogin, onLogout }) {
 
   const [doseAmounts, setDoseAmounts] = useState({ ph_up: '1.0', ph_down: '1.0', nutrient_a: '2.0', nutrient_b: '2.0' })
   const [lightIntensity, setLightIntensity] = useState(80)
-  const [inspectionLight, setInspectionLight] = useState(false)
-  const [growthStage, setGrowthStage] = useState('vegetative')
+  const [probeInterval, setProbeInterval] = useState('300')
   const [confirmReset, setConfirmReset] = useState(false)
   const [status, setStatus] = useState('')
-  const [activeTransport, setActiveTransport] = useState(null)
+  const [activeAction, setActiveAction] = useState(null)
 
   const feedback = (msg) => { setStatus(msg); setTimeout(() => setStatus(''), 3000) }
 
@@ -176,42 +161,51 @@ export default function SystemControls({ authToken, onLogin, onLogout }) {
   /* ── Authenticated controls ──────────────────────────────────────────────── */
   const emergencyStop = () => {
     if (!window.confirm('Confirm EMERGENCY STOP \u2014 all operations will halt immediately.')) return
-    api('/api/emergency_stop').then(() => feedback('Emergency stop sent'))
+    api('/api/controls/estop').then(() => feedback('Emergency stop sent'))
   }
 
-  const transportTo = (pos) => {
-    setActiveTransport(pos)
-    api('/api/transport_to', 'POST', { position: pos })
-      .then(() => { feedback(`Transport \u2192 ${pos}`); setTimeout(() => setActiveTransport(null), 2000) })
+  const triggerProbe = () => {
+    setActiveAction('probe')
+    api('/api/controls/trigger_probe')
+      .then(() => { feedback('Probe cycle triggered'); setTimeout(() => setActiveAction(null), 2000) })
+      .catch(() => { feedback('Probe trigger failed'); setActiveAction(null) })
+  }
+
+  const triggerAeration = () => {
+    setActiveAction('aeration')
+    api('/api/controls/trigger_aeration')
+      .then(() => { feedback('Aeration cycle triggered'); setTimeout(() => setActiveAction(null), 2000) })
+      .catch(() => { feedback('Aeration trigger failed'); setActiveAction(null) })
+  }
+
+  const captureVision = () => {
+    setActiveAction('vision')
+    api('/api/controls/capture_vision')
+      .then(() => { feedback('Vision capture triggered'); setTimeout(() => setActiveAction(null), 2000) })
+      .catch(() => { feedback('Vision capture failed'); setActiveAction(null) })
+  }
+
+  const applyProbeInterval = () => {
+    const secs = parseFloat(probeInterval)
+    if (isNaN(secs) || secs <= 0) { feedback('Invalid interval'); return }
+    api('/api/controls/set_probe_interval', 'POST', { interval_seconds: secs })
+      .then(d => feedback(`Probe interval \u2192 ${d.applied_interval_seconds ?? secs}s`))
   }
 
   const forceDose = (pump_id) => {
     const ml = parseFloat(doseAmounts[pump_id])
     if (isNaN(ml) || ml <= 0) { feedback('Invalid dose amount'); return }
-    api('/api/force_dose', 'POST', { pump_id, amount_ml: ml })
+    api('/api/controls/dose', 'POST', { pump_id, amount_ml: ml })
       .then(() => feedback(`Dosed ${pump_id}: ${ml} mL`))
   }
 
   const setLight = (intensity) => {
-    api('/api/set_grow_light_intensity', 'POST', { intensity_percent: intensity })
+    api(`/api/controls/light/${intensity}`)
       .then(() => feedback(`Grow light \u2192 ${intensity}%`))
   }
 
-  const triggerInspection = () => {
-    api('/api/trigger_inspection').then(() => feedback('Inspection triggered'))
-  }
-
-  const triggerHarvest = () => {
-    api('/api/trigger_harvest', 'POST').then(() => feedback('Harvest triggered'))
-  }
-
-  const applyGrowthStage = () => {
-    api('/api/set_growth_stage', 'POST', { stage: growthStage })
-      .then(() => feedback(`Growth stage \u2192 ${growthStage}`))
-  }
-
-  const resetCropCycle = () => {
-    api('/api/reset_crop_cycle').then(() => { feedback('Crop cycle reset'); setConfirmReset(false) })
+  const resetSystem = () => {
+    api('/api/controls/estop').then(() => { feedback('System reset via E-STOP'); setConfirmReset(false) })
   }
 
   return (
@@ -263,29 +257,35 @@ export default function SystemControls({ authToken, onLogin, onLogout }) {
         </button>
       </div>
 
-      {/* Transport Controls (matching mockup 3 layout) */}
+      {/* System Actions */}
       <div>
-        <div className="section-label">Transport Controls</div>
+        <div className="section-label">System Actions</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <ActionRow icon={TransportIcons.WORK} label="Move to WORK"
-            active={activeTransport === 'WORK'} onClick={() => transportTo('WORK')}/>
-          <ActionRow icon={TransportIcons.GROW} label="Move to GROW"
-            active={activeTransport === 'GROW'} onClick={() => transportTo('GROW')}/>
-          <ActionRow icon={TransportIcons.INSPECT} label="Move to INSPECT"
-            active={activeTransport === 'INSPECT'} onClick={() => transportTo('INSPECT')}/>
-          <ActionRow icon={TransportIcons.HOME} label="Home Rail"
-            active={activeTransport === 'HOME'} onClick={() => transportTo('HOME')}/>
+          <ActionRow icon="\u{1F9EA}" label="Trigger Probe Cycle"
+            active={activeAction === 'probe'} onClick={triggerProbe}/>
+          <ActionRow icon="\u{1F4A8}" label="Trigger Aeration Cycle"
+            active={activeAction === 'aeration'} onClick={triggerAeration}/>
+          <ActionRow icon="\u{1F4F7}" label="Capture Vision / NDVI"
+            active={activeAction === 'vision'} onClick={captureVision}/>
         </div>
       </div>
 
-      {/* Actions */}
-      <div>
-        <div className="section-label">Actions</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <ActionRow icon={ActionIcons.inspect} label="Trigger Inspection" onClick={triggerInspection}/>
-          <ActionRow icon={ActionIcons.harvest} label="Trigger Harvest" onClick={triggerHarvest}/>
-          <ActionRow icon={ActionIcons.dose} label="Force pH Dose"
-            onClick={() => forceDose('ph_up')}/>
+      {/* Probe Interval */}
+      <div className="card">
+        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 18 }}>
+          Probe Interval
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500, width: 120 }}>Cycle Interval</span>
+          <input
+            type="number" min="30" max="3600" step="30"
+            value={probeInterval}
+            onChange={e => setProbeInterval(e.target.value)}
+            style={{ width: 90 }}
+          />
+          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>seconds</span>
+          <button className="btn-primary" onClick={applyProbeInterval}
+            style={{ fontSize: 12, padding: '6px 16px' }}>Apply</button>
         </div>
       </div>
 
@@ -325,47 +325,14 @@ export default function SystemControls({ authToken, onLogin, onLogout }) {
         <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 18 }}>
           Lighting
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500, width: 120 }}>Grow Intensity</span>
-            <input type="range" min="0" max="100" value={lightIntensity}
-              onChange={e => setLightIntensity(parseInt(e.target.value))}
-              style={{ flex: 1, maxWidth: 200 }}/>
-            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--yellow)', width: 40 }}>{lightIntensity}%</span>
-            <button className="btn-ghost" onClick={() => setLight(lightIntensity)}
-              style={{ fontSize: 12, padding: '6px 14px' }}>Apply</button>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500, width: 120 }}>Inspection Light</span>
-            <button
-              className={inspectionLight ? 'btn-success' : 'btn-ghost'}
-              onClick={() => {
-                const next = !inspectionLight
-                setInspectionLight(next)
-                api('/api/set_inspection_light', 'POST', { on: next })
-                  .then(() => feedback(`Inspection light ${next ? 'ON' : 'OFF'}`))
-              }}
-              style={{ fontSize: 12, padding: '6px 16px' }}>
-              {inspectionLight ? 'ON' : 'OFF'}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Growth Stage Override */}
-      <div className="card">
-        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 18 }}>
-          Growth Stage Override
-        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <select value={growthStage} onChange={e => setGrowthStage(e.target.value)}
-            style={{ padding: '8px 12px' }}>
-            <option value="seedling">Seedling</option>
-            <option value="vegetative">Vegetative</option>
-            <option value="mature">Mature</option>
-          </select>
-          <button className="btn-primary" onClick={applyGrowthStage}
-            style={{ fontSize: 13, padding: '8px 20px' }}>Apply</button>
+          <span style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500, width: 120 }}>Grow Intensity</span>
+          <input type="range" min="0" max="100" value={lightIntensity}
+            onChange={e => setLightIntensity(parseInt(e.target.value))}
+            style={{ flex: 1, maxWidth: 200 }}/>
+          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--yellow)', width: 40 }}>{lightIntensity}%</span>
+          <button className="btn-ghost" onClick={() => setLight(lightIntensity)}
+            style={{ fontSize: 12, padding: '6px 14px' }}>Apply</button>
         </div>
       </div>
 
@@ -377,15 +344,15 @@ export default function SystemControls({ authToken, onLogin, onLogout }) {
         {!confirmReset ? (
           <button className="btn-danger" onClick={() => setConfirmReset(true)}
             style={{ fontSize: 13 }}>
-            Reset Crop Cycle...
+            Reset System (E-STOP)...
           </button>
         ) : (
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <span style={{ fontSize: 13, color: 'var(--red)', fontWeight: 500 }}>
-              This will reset all plant data. Are you sure?
+              This will publish an emergency stop. Are you sure?
             </span>
-            <button className="btn-danger" onClick={resetCropCycle}
-              style={{ fontSize: 13, fontWeight: 700 }}>Confirm Reset</button>
+            <button className="btn-danger" onClick={resetSystem}
+              style={{ fontSize: 13, fontWeight: 700 }}>Confirm</button>
             <button className="btn-ghost" onClick={() => setConfirmReset(false)}
               style={{ fontSize: 13 }}>Cancel</button>
           </div>

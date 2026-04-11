@@ -1,44 +1,41 @@
 # MIT License
-# Copyright (c) 2024 Claudroponics Project
+# Copyright (c) 2026 AIdroponics Project
 #
-# ROS2 bridge node: subscribes to all hydroponics topics, exposes latest
-# values thread-safely, holds service/action clients for control endpoints,
+# ROS2 bridge node: subscribes to all V0.1 hydroponics topics, exposes latest
+# values thread-safely, holds service clients for control endpoints,
 # and broadcasts JSON updates to connected WebSocket clients.
 
 from __future__ import annotations
 
 import json
 import threading
-import time
 from typing import Any, Callable, Dict, List, Optional
 
 import rclpy
-from rclpy.action import ActionClient
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
 
 from hydroponics_msgs.msg import (
-    BehaviorTreeStatus,
-    InspectionResult,
-    LightStatus,
-    NutrientStatus,
-    PlantPositionState,
+    ProbeReading,
+    NDVIReading,
+    PlantMeasurement,
+    WaterLevel,
+    TopOffEvent,
+    DosingEvent,
+    PlantStatus,
+    DiagnosticReport,
+    NDVIAlert,
     SystemAlert,
-    TransportStatus,
-    YieldMetrics,
 )
 from hydroponics_msgs.srv import (
-    ForceDose,
-    ResetCropCycle,
-    SetGrowLightIntensity,
-    SetGrowthStage,
-    SetInspectionLight,
-    TriggerInspection,
+    TriggerProbe,
+    TriggerAeration,
+    SetProbeInterval,
+    CaptureVision,
 )
-from hydroponics_msgs.action import ExecuteHarvest, TransportTo
 
 # ---------------------------------------------------------------------------
-# Helpers
+# QoS profiles
 # ---------------------------------------------------------------------------
 
 _BEST_EFFORT_QOS = QoSProfile(
@@ -54,10 +51,15 @@ _RELIABLE_QOS = QoSProfile(
 )
 
 MAX_ALERTS: int = 50
+MAX_DOSING_HISTORY: int = 200
+MAX_TOPOFF_HISTORY: int = 50
 
+
+# ---------------------------------------------------------------------------
+# Message → dict helpers
+# ---------------------------------------------------------------------------
 
 def _ros_time_to_iso(t: Any) -> str:
-    """Convert a builtin_interfaces/Time to an ISO-8601 string."""
     import datetime
     sec = getattr(t, "sec", 0)
     nanosec = getattr(t, "nanosec", 0)
@@ -65,80 +67,101 @@ def _ros_time_to_iso(t: Any) -> str:
     return datetime.datetime.utcfromtimestamp(ts).isoformat() + "Z"
 
 
-def _nutrient_status_to_dict(msg: NutrientStatus) -> Dict[str, Any]:
+def _probe_reading_to_dict(msg: ProbeReading) -> Dict[str, Any]:
     return {
-        "ph_current": msg.ph_current,
-        "ec_current": msg.ec_current,
-        "temperature_c": msg.temperature_c,
-        "ph_target": msg.ph_target,
-        "ec_target": msg.ec_target,
-        "ph_pid_output": msg.ph_pid_output,
-        "ec_pid_output": msg.ec_pid_output,
-        "a_b_ratio": msg.a_b_ratio,
-        "growth_stage": msg.growth_stage,
-        "days_since_planting": msg.days_since_planting,
-        "pump_active": list(msg.pump_active),
-        "timestamp": _ros_time_to_iso(msg.header.stamp),
+        "ph": msg.ph,
+        "ec_mS_cm": msg.ec_mS_cm,
+        "temperature_C": msg.temperature_C,
+        "timestamp": _ros_time_to_iso(msg.timestamp),
     }
 
 
-def _transport_status_to_dict(msg: TransportStatus) -> Dict[str, Any]:
+def _ndvi_reading_to_dict(msg: NDVIReading) -> Dict[str, Any]:
     return {
-        "current_position": msg.current_position,
-        "target_position": msg.target_position,
-        "is_moving": msg.is_moving,
-        "position_mm": msg.position_mm,
-        "velocity_mm_s": msg.velocity_mm_s,
-        "timestamp": _ros_time_to_iso(msg.header.stamp),
+        "mean_ndvi": msg.mean_ndvi,
+        "median_ndvi": msg.median_ndvi,
+        "std_dev_ndvi": msg.std_dev_ndvi,
+        "ndvi_trend_slope": msg.ndvi_trend_slope,
+        "trend_window_size": msg.trend_window_size,
+        "timestamp": _ros_time_to_iso(msg.timestamp),
     }
 
 
-def _light_status_to_dict(msg: LightStatus) -> Dict[str, Any]:
+def _plant_measurement_to_dict(msg: PlantMeasurement) -> Dict[str, Any]:
     return {
-        "grow_intensity_percent": msg.grow_intensity_percent,
-        "schedule_state": msg.schedule_state,
-        "inspection_light_on": msg.inspection_light_on,
-        "next_transition_time": msg.next_transition_time,
-        "timestamp": _ros_time_to_iso(msg.header.stamp),
-    }
-
-
-def _bt_status_to_dict(msg: BehaviorTreeStatus) -> Dict[str, Any]:
-    return {
-        "system_state": msg.system_state,
-        "active_node_path": msg.active_node_path,
-        "running_nodes": list(msg.running_nodes),
-        "failed_nodes": list(msg.failed_nodes),
-        "timestamp": _ros_time_to_iso(msg.header.stamp),
-    }
-
-
-def _plant_state_to_dict(msg: PlantPositionState) -> Dict[str, Any]:
-    return {
-        "position_index": msg.position_index,
-        "plant_id": msg.plant_id,
-        "plant_profile": msg.plant_profile,
-        "status": msg.status,
-        "health_state": msg.health_state,
-        "canopy_area_cm2": msg.canopy_area_cm2,
         "height_cm": msg.height_cm,
-        "leaf_count": msg.leaf_count,
-        "days_since_planted": msg.days_since_planted,
-        "cut_cycle_number": msg.cut_cycle_number,
-        "last_inspection": _ros_time_to_iso(msg.last_inspection),
-        "last_harvest": _ros_time_to_iso(msg.last_harvest),
+        "canopy_width_cm": msg.canopy_width_cm,
+        "canopy_area_cm2": msg.canopy_area_cm2,
+        "visual_symptoms": list(msg.visual_symptoms),
+        "timestamp": _ros_time_to_iso(msg.timestamp),
     }
 
 
-def _yield_metrics_to_dict(msg: YieldMetrics) -> Dict[str, Any]:
+def _water_level_to_dict(msg: WaterLevel) -> Dict[str, Any]:
     return {
-        "total_yield_grams": msg.total_yield_grams,
-        "yield_per_watt_hour": msg.yield_per_watt_hour,
-        "yield_per_liter_nutrient": msg.yield_per_liter_nutrient,
-        "cost_per_gram": msg.cost_per_gram,
-        "total_harvests": msg.total_harvests,
-        "total_crop_cycles": msg.total_crop_cycles,
-        "timestamp": _ros_time_to_iso(msg.header.stamp),
+        "level_cm": msg.level_cm,
+        "level_percent": msg.level_percent,
+        "timestamp": _ros_time_to_iso(msg.timestamp),
+    }
+
+
+def _topoff_event_to_dict(msg: TopOffEvent) -> Dict[str, Any]:
+    return {
+        "volume_added_mL": msg.volume_added_mL,
+        "level_before_percent": msg.level_before_percent,
+        "level_after_percent": msg.level_after_percent,
+        "timestamp": _ros_time_to_iso(msg.timestamp),
+    }
+
+
+def _dosing_event_to_dict(msg: DosingEvent) -> Dict[str, Any]:
+    return {
+        "pump_id": msg.pump_id,
+        "dose_mL": msg.dose_mL,
+        "duration_seconds": msg.duration_seconds,
+        "reason": msg.reason,
+        "ph_before": msg.ph_before,
+        "ec_before": msg.ec_before,
+        "solution_volume_L": msg.solution_volume_L,
+        "timestamp": _ros_time_to_iso(msg.timestamp),
+    }
+
+
+def _plant_status_to_dict(msg: PlantStatus) -> Dict[str, Any]:
+    return {
+        "status_code": msg.status_code,
+        "summary": msg.summary,
+        "active_warnings": list(msg.active_warnings),
+        "recommendations": list(msg.recommendations),
+        "last_analysis": _ros_time_to_iso(msg.last_analysis),
+    }
+
+
+def _diagnostic_report_to_dict(msg: DiagnosticReport) -> Dict[str, Any]:
+    return {
+        "detected_symptoms": list(msg.detected_symptoms),
+        "active_rules": list(msg.active_rules),
+        "recommendations": list(msg.recommendations),
+        "overall_severity": msg.overall_severity,
+        "probe_ph": msg.probe_ph,
+        "probe_ec": msg.probe_ec,
+        "probe_temp": msg.probe_temp,
+        "mean_ndvi": msg.mean_ndvi,
+        "ndvi_trend_slope": msg.ndvi_trend_slope,
+        "plant_area_cm2": msg.plant_area_cm2,
+        "plant_height_cm": msg.plant_height_cm,
+        "water_level_percent": msg.water_level_percent,
+        "timestamp": _ros_time_to_iso(msg.timestamp),
+    }
+
+
+def _ndvi_alert_to_dict(msg: NDVIAlert) -> Dict[str, Any]:
+    return {
+        "current_ndvi": msg.current_ndvi,
+        "ndvi_trend_slope": msg.ndvi_trend_slope,
+        "ndvi_48h_ago": msg.ndvi_48h_ago,
+        "alert_level": msg.alert_level,
+        "timestamp": _ros_time_to_iso(msg.timestamp),
     }
 
 
@@ -152,171 +175,131 @@ def _alert_to_dict(msg: SystemAlert) -> Dict[str, Any]:
     }
 
 
-def _inspection_result_to_dict(msg: InspectionResult) -> Dict[str, Any]:
-    return {
-        "plants": [_plant_state_to_dict(p) for p in msg.plants],
-        "scan_number": msg.scan_number,
-        "disease_detected": msg.disease_detected,
-        "disease_type": msg.disease_type,
-        "deficiency_trends": list(msg.deficiency_trends),
-        "timestamp": _ros_time_to_iso(msg.header.stamp),
-    }
-
-
 # ---------------------------------------------------------------------------
 # RosBridge
 # ---------------------------------------------------------------------------
 
 
 class RosBridge(Node):
-    """ROS2 node that aggregates all hydroponics topics and exposes them
+    """ROS2 node that aggregates all V0.1 hydroponics topics and exposes them
     through thread-safe properties.  WebSocket clients registered via
-    ``register_ws_sender`` receive JSON-encoded pushes whenever topics
-    update.
+    ``register_ws_sender`` receive JSON-encoded pushes whenever topics update.
     """
 
     def __init__(self) -> None:
         super().__init__("dashboard_ros_bridge")
-
         self._lock = threading.Lock()
 
         # ---- cached topic data ----------------------------------------
-        self._nutrient_status: Optional[Dict[str, Any]] = None
-        self._transport_status: Optional[Dict[str, Any]] = None
-        self._light_status: Optional[Dict[str, Any]] = None
-        self._bt_status: Optional[Dict[str, Any]] = None
-        self._plant_status: List[Dict[str, Any]] = []
-        self._yield_metrics: Optional[Dict[str, Any]] = None
+        self._probe_reading: Optional[Dict[str, Any]] = None
+        self._ndvi_reading: Optional[Dict[str, Any]] = None
+        self._plant_measurement: Optional[Dict[str, Any]] = None
+        self._water_level: Optional[Dict[str, Any]] = None
+        self._plant_status: Optional[Dict[str, Any]] = None
+        self._diagnostic_report: Optional[Dict[str, Any]] = None
+        self._ndvi_alert: Optional[Dict[str, Any]] = None
         self._alerts: List[Dict[str, Any]] = []
-        self._inspection_result: Optional[Dict[str, Any]] = None
 
-        # nutrient history ring-buffer (last 2880 samples @ 1 Hz = 48 h)
-        self._nutrient_history: List[Dict[str, Any]] = []
-        self._nutrient_history_max: int = 2880
+        # ---- history ring-buffers ----------------------------------------
+        self._probe_history: List[Dict[str, Any]] = []
+        self._probe_history_max: int = 2880       # 48 h @ ~1 Hz
+        self._dosing_history: List[Dict[str, Any]] = []
+        self._dosing_history_max: int = MAX_DOSING_HISTORY
+        self._ndvi_history: List[Dict[str, Any]] = []
+        self._ndvi_history_max: int = 2880
+        self._topoff_history: List[Dict[str, Any]] = []
+        self._topoff_history_max: int = MAX_TOPOFF_HISTORY
 
         # ---- WebSocket broadcast senders --------------------------------
         self._ws_senders: List[Callable[[str], None]] = []
 
         # ---- Subscriptions ----------------------------------------------
-        self.create_subscription(
-            NutrientStatus,
-            "/nutrient_status",
-            self._cb_nutrient,
-            _BEST_EFFORT_QOS,
-        )
-        self.create_subscription(
-            TransportStatus,
-            "/transport_status",
-            self._cb_transport,
-            _BEST_EFFORT_QOS,
-        )
-        self.create_subscription(
-            LightStatus,
-            "/light_status",
-            self._cb_light,
-            _BEST_EFFORT_QOS,
-        )
-        self.create_subscription(
-            BehaviorTreeStatus,
-            "/behavior_tree_status",
-            self._cb_bt,
-            _BEST_EFFORT_QOS,
-        )
-        self.create_subscription(
-            InspectionResult,
-            "/plant_status",
-            self._cb_plant_status_from_inspection,
-            _RELIABLE_QOS,
-        )
-        self.create_subscription(
-            YieldMetrics,
-            "/yield_metrics",
-            self._cb_yield,
-            _BEST_EFFORT_QOS,
-        )
-        self.create_subscription(
-            SystemAlert,
-            "/system_alert",
-            self._cb_alert,
-            _RELIABLE_QOS,
-        )
-        self.create_subscription(
-            InspectionResult,
-            "/inspection_result",
-            self._cb_inspection,
-            _RELIABLE_QOS,
-        )
+        self.create_subscription(ProbeReading, "/probe/reading", self._cb_probe, _BEST_EFFORT_QOS)
+        self.create_subscription(NDVIReading, "/vision/ndvi", self._cb_ndvi, _BEST_EFFORT_QOS)
+        self.create_subscription(PlantMeasurement, "/vision/measurement", self._cb_plant_measurement, _BEST_EFFORT_QOS)
+        self.create_subscription(WaterLevel, "/water/level", self._cb_water_level, _BEST_EFFORT_QOS)
+        self.create_subscription(TopOffEvent, "/water/topoff_event", self._cb_topoff, _RELIABLE_QOS)
+        self.create_subscription(DosingEvent, "/dosing/event", self._cb_dosing, _RELIABLE_QOS)
+        self.create_subscription(PlantStatus, "/bin/status", self._cb_plant_status, _BEST_EFFORT_QOS)
+        self.create_subscription(DiagnosticReport, "/diagnostics/report", self._cb_diagnostic, _RELIABLE_QOS)
+        self.create_subscription(NDVIAlert, "/vision/ndvi_alert", self._cb_ndvi_alert, _RELIABLE_QOS)
+        self.create_subscription(SystemAlert, "/system_alert", self._cb_alert, _RELIABLE_QOS)
 
         # ---- Service clients --------------------------------------------
-        self._srv_force_dose = self.create_client(ForceDose, "/force_dose")
-        self._srv_set_growth_stage = self.create_client(
-            SetGrowthStage, "/set_growth_stage"
-        )
-        self._srv_reset_crop_cycle = self.create_client(
-            ResetCropCycle, "/reset_crop_cycle"
-        )
-        self._srv_set_inspection_light = self.create_client(
-            SetInspectionLight, "/set_inspection_light"
-        )
-        self._srv_set_grow_light_intensity = self.create_client(
-            SetGrowLightIntensity, "/set_grow_light_intensity"
-        )
-        self._srv_trigger_inspection = self.create_client(
-            TriggerInspection, "/trigger_inspection"
-        )
+        self._srv_trigger_probe = self.create_client(TriggerProbe, "/probe/trigger")
+        self._srv_trigger_aeration = self.create_client(TriggerAeration, "/aeration/trigger")
+        self._srv_set_probe_interval = self.create_client(SetProbeInterval, "/probe/set_interval")
+        self._srv_capture_vision = self.create_client(CaptureVision, "/vision/capture")
 
-        # ---- Action clients ---------------------------------------------
-        self._ac_transport_to = ActionClient(self, TransportTo, "/transport_to")
-        self._ac_execute_harvest = ActionClient(self, ExecuteHarvest, "/execute_harvest")
-
-        self.get_logger().info("RosBridge node initialised.")
+        self.get_logger().info("RosBridge (V0.1) node initialised.")
 
     # ------------------------------------------------------------------
     # Subscription callbacks
     # ------------------------------------------------------------------
 
-    def _cb_nutrient(self, msg: NutrientStatus) -> None:
-        d = _nutrient_status_to_dict(msg)
+    def _cb_probe(self, msg: ProbeReading) -> None:
+        d = _probe_reading_to_dict(msg)
         with self._lock:
-            self._nutrient_status = d
-            self._nutrient_history.append(d)
-            if len(self._nutrient_history) > self._nutrient_history_max:
-                self._nutrient_history = self._nutrient_history[
-                    -self._nutrient_history_max :
-                ]
-        self._broadcast({"type": "nutrient_status", "data": d})
+            self._probe_reading = d
+            self._probe_history.append(d)
+            if len(self._probe_history) > self._probe_history_max:
+                self._probe_history = self._probe_history[-self._probe_history_max:]
+        self._broadcast({"type": "probe_reading", "data": d})
 
-    def _cb_transport(self, msg: TransportStatus) -> None:
-        d = _transport_status_to_dict(msg)
+    def _cb_ndvi(self, msg: NDVIReading) -> None:
+        d = _ndvi_reading_to_dict(msg)
         with self._lock:
-            self._transport_status = d
-        self._broadcast({"type": "transport_status", "data": d})
+            self._ndvi_reading = d
+            self._ndvi_history.append(d)
+            if len(self._ndvi_history) > self._ndvi_history_max:
+                self._ndvi_history = self._ndvi_history[-self._ndvi_history_max:]
+        self._broadcast({"type": "ndvi_reading", "data": d})
 
-    def _cb_light(self, msg: LightStatus) -> None:
-        d = _light_status_to_dict(msg)
+    def _cb_plant_measurement(self, msg: PlantMeasurement) -> None:
+        d = _plant_measurement_to_dict(msg)
         with self._lock:
-            self._light_status = d
-        self._broadcast({"type": "light_status", "data": d})
+            self._plant_measurement = d
+        self._broadcast({"type": "plant_measurement", "data": d})
 
-    def _cb_bt(self, msg: BehaviorTreeStatus) -> None:
-        d = _bt_status_to_dict(msg)
+    def _cb_water_level(self, msg: WaterLevel) -> None:
+        d = _water_level_to_dict(msg)
         with self._lock:
-            self._bt_status = d
-        self._broadcast({"type": "bt_status", "data": d})
+            self._water_level = d
+        self._broadcast({"type": "water_level", "data": d})
 
-    def _cb_plant_status_from_inspection(self, msg: InspectionResult) -> None:
-        """Also update plant list whenever an InspectionResult arrives on
-        the /plant_status topic (same message type used for live plant state)."""
-        plants = [_plant_state_to_dict(p) for p in msg.plants]
+    def _cb_topoff(self, msg: TopOffEvent) -> None:
+        d = _topoff_event_to_dict(msg)
         with self._lock:
-            self._plant_status = plants
-        self._broadcast({"type": "plant_status", "data": plants})
+            self._topoff_history.insert(0, d)
+            if len(self._topoff_history) > self._topoff_history_max:
+                self._topoff_history = self._topoff_history[:self._topoff_history_max]
+        self._broadcast({"type": "topoff_event", "data": d})
 
-    def _cb_yield(self, msg: YieldMetrics) -> None:
-        d = _yield_metrics_to_dict(msg)
+    def _cb_dosing(self, msg: DosingEvent) -> None:
+        d = _dosing_event_to_dict(msg)
         with self._lock:
-            self._yield_metrics = d
-        self._broadcast({"type": "yield_metrics", "data": d})
+            self._dosing_history.insert(0, d)
+            if len(self._dosing_history) > self._dosing_history_max:
+                self._dosing_history = self._dosing_history[:self._dosing_history_max]
+        self._broadcast({"type": "dosing_event", "data": d})
+
+    def _cb_plant_status(self, msg: PlantStatus) -> None:
+        d = _plant_status_to_dict(msg)
+        with self._lock:
+            self._plant_status = d
+        self._broadcast({"type": "plant_status", "data": d})
+
+    def _cb_diagnostic(self, msg: DiagnosticReport) -> None:
+        d = _diagnostic_report_to_dict(msg)
+        with self._lock:
+            self._diagnostic_report = d
+        self._broadcast({"type": "diagnostic_report", "data": d})
+
+    def _cb_ndvi_alert(self, msg: NDVIAlert) -> None:
+        d = _ndvi_alert_to_dict(msg)
+        with self._lock:
+            self._ndvi_alert = d
+        self._broadcast({"type": "ndvi_alert", "data": d})
 
     def _cb_alert(self, msg: SystemAlert) -> None:
         d = _alert_to_dict(msg)
@@ -326,70 +309,63 @@ class RosBridge(Node):
                 self._alerts = self._alerts[:MAX_ALERTS]
         self._broadcast({"type": "system_alert", "data": d})
 
-    def _cb_inspection(self, msg: InspectionResult) -> None:
-        d = _inspection_result_to_dict(msg)
-        with self._lock:
-            self._inspection_result = d
-            # also update plant list from inspection payload
-            self._plant_status = d["plants"]
-        self._broadcast({"type": "inspection_result", "data": d})
-
     # ------------------------------------------------------------------
     # Thread-safe property accessors
     # ------------------------------------------------------------------
 
     @property
-    def nutrient_status(self) -> Optional[Dict[str, Any]]:
-        with self._lock:
-            return self._nutrient_status
+    def probe_reading(self) -> Optional[Dict[str, Any]]:
+        with self._lock: return self._probe_reading
 
     @property
-    def transport_status(self) -> Optional[Dict[str, Any]]:
-        with self._lock:
-            return self._transport_status
+    def ndvi_reading(self) -> Optional[Dict[str, Any]]:
+        with self._lock: return self._ndvi_reading
 
     @property
-    def light_status(self) -> Optional[Dict[str, Any]]:
-        with self._lock:
-            return self._light_status
+    def plant_measurement(self) -> Optional[Dict[str, Any]]:
+        with self._lock: return self._plant_measurement
 
     @property
-    def bt_status(self) -> Optional[Dict[str, Any]]:
-        with self._lock:
-            return self._bt_status
+    def water_level(self) -> Optional[Dict[str, Any]]:
+        with self._lock: return self._water_level
 
     @property
-    def plant_status(self) -> List[Dict[str, Any]]:
-        with self._lock:
-            return list(self._plant_status)
+    def plant_status(self) -> Optional[Dict[str, Any]]:
+        with self._lock: return self._plant_status
 
     @property
-    def yield_metrics(self) -> Optional[Dict[str, Any]]:
-        with self._lock:
-            return self._yield_metrics
+    def diagnostic_report(self) -> Optional[Dict[str, Any]]:
+        with self._lock: return self._diagnostic_report
+
+    @property
+    def ndvi_alert(self) -> Optional[Dict[str, Any]]:
+        with self._lock: return self._ndvi_alert
 
     @property
     def alerts(self) -> List[Dict[str, Any]]:
-        with self._lock:
-            return list(self._alerts)
+        with self._lock: return list(self._alerts)
 
     @property
-    def inspection_result(self) -> Optional[Dict[str, Any]]:
-        with self._lock:
-            return self._inspection_result
+    def probe_history(self) -> List[Dict[str, Any]]:
+        with self._lock: return list(self._probe_history)
 
     @property
-    def nutrient_history(self) -> List[Dict[str, Any]]:
-        with self._lock:
-            return list(self._nutrient_history)
+    def dosing_history(self) -> List[Dict[str, Any]]:
+        with self._lock: return list(self._dosing_history)
+
+    @property
+    def ndvi_history(self) -> List[Dict[str, Any]]:
+        with self._lock: return list(self._ndvi_history)
+
+    @property
+    def topoff_history(self) -> List[Dict[str, Any]]:
+        with self._lock: return list(self._topoff_history)
 
     # ------------------------------------------------------------------
     # WebSocket broadcast
     # ------------------------------------------------------------------
 
     def register_ws_sender(self, sender: Callable[[str], None]) -> None:
-        """Register a callable that accepts a JSON string and sends it to
-        a single WebSocket client."""
         with self._lock:
             self._ws_senders.append(sender)
 
@@ -401,8 +377,6 @@ class RosBridge(Node):
                 pass
 
     def _broadcast(self, payload: Dict[str, Any]) -> None:
-        """Push a JSON-serialised payload to every registered WS sender.
-        Senders that raise are silently removed."""
         text = json.dumps(payload, default=str)
         dead: List[Callable[[str], None]] = []
         with self._lock:
@@ -421,130 +395,62 @@ class RosBridge(Node):
                         pass
 
     def broadcast_snapshot(self) -> None:
-        """Push a full-state snapshot to all connected WebSocket clients."""
         snapshot: Dict[str, Any] = {
             "type": "snapshot",
             "data": {
-                "nutrient_status": self.nutrient_status,
-                "transport_status": self.transport_status,
-                "light_status": self.light_status,
-                "bt_status": self.bt_status,
+                "probe_reading": self.probe_reading,
+                "ndvi_reading": self.ndvi_reading,
+                "plant_measurement": self.plant_measurement,
+                "water_level": self.water_level,
                 "plant_status": self.plant_status,
-                "yield_metrics": self.yield_metrics,
+                "diagnostic_report": self.diagnostic_report,
+                "ndvi_alert": self.ndvi_alert,
                 "alerts": self.alerts[:20],
-                "inspection_result": self.inspection_result,
             },
         }
         self._broadcast(snapshot)
 
     # ------------------------------------------------------------------
-    # Service / Action wrappers
+    # Service wrappers
     # ------------------------------------------------------------------
 
-    def call_force_dose(
-        self, pump_id: str, amount_ml: float, timeout: float = 5.0
-    ) -> bool:
-        if not self._srv_force_dose.wait_for_service(timeout_sec=timeout):
-            self.get_logger().warning("force_dose service not available")
+    def call_trigger_probe(self, timeout: float = 5.0) -> bool:
+        if not self._srv_trigger_probe.wait_for_service(timeout_sec=timeout):
+            self.get_logger().warning("trigger_probe service not available")
             return False
-        req = ForceDose.Request()
-        req.pump_id = pump_id
-        req.amount_ml = amount_ml
-        future = self._srv_force_dose.call_async(req)
+        req = TriggerProbe.Request()
+        future = self._srv_trigger_probe.call_async(req)
         rclpy.spin_until_future_complete(self, future, timeout_sec=timeout)
-        if future.done():
-            return future.result().success
-        return False
+        return future.done() and future.result().success
 
-    def call_set_growth_stage(self, stage: str, timeout: float = 5.0) -> bool:
-        if not self._srv_set_growth_stage.wait_for_service(timeout_sec=timeout):
-            self.get_logger().warning("set_growth_stage service not available")
+    def call_trigger_aeration(self, timeout: float = 5.0) -> bool:
+        if not self._srv_trigger_aeration.wait_for_service(timeout_sec=timeout):
+            self.get_logger().warning("trigger_aeration service not available")
             return False
-        req = SetGrowthStage.Request()
-        req.stage = stage
-        future = self._srv_set_growth_stage.call_async(req)
+        req = TriggerAeration.Request()
+        future = self._srv_trigger_aeration.call_async(req)
+        rclpy.spin_until_future_complete(self, future, timeout_sec=timeout)
+        return future.done() and future.result().success
+
+    def call_set_probe_interval(
+        self, interval_seconds: float, timeout: float = 5.0
+    ) -> float:
+        if not self._srv_set_probe_interval.wait_for_service(timeout_sec=timeout):
+            self.get_logger().warning("set_probe_interval service not available")
+            return 0.0
+        req = SetProbeInterval.Request()
+        req.interval_seconds = interval_seconds
+        future = self._srv_set_probe_interval.call_async(req)
         rclpy.spin_until_future_complete(self, future, timeout_sec=timeout)
         if future.done():
-            return future.result().success
-        return False
+            return future.result().applied_interval_seconds
+        return 0.0
 
-    def call_reset_crop_cycle(
-        self, position_index: int, plant_profile: str, timeout: float = 5.0
-    ) -> bool:
-        if not self._srv_reset_crop_cycle.wait_for_service(timeout_sec=timeout):
-            self.get_logger().warning("reset_crop_cycle service not available")
+    def call_capture_vision(self, timeout: float = 10.0) -> bool:
+        if not self._srv_capture_vision.wait_for_service(timeout_sec=timeout):
+            self.get_logger().warning("capture_vision service not available")
             return False
-        req = ResetCropCycle.Request()
-        req.position_index = position_index
-        req.plant_profile = plant_profile
-        future = self._srv_reset_crop_cycle.call_async(req)
+        req = CaptureVision.Request()
+        future = self._srv_capture_vision.call_async(req)
         rclpy.spin_until_future_complete(self, future, timeout_sec=timeout)
-        if future.done():
-            return future.result().success
-        return False
-
-    def call_set_inspection_light(self, on: bool, timeout: float = 5.0) -> bool:
-        if not self._srv_set_inspection_light.wait_for_service(timeout_sec=timeout):
-            self.get_logger().warning("set_inspection_light service not available")
-            return False
-        req = SetInspectionLight.Request()
-        req.on = on
-        future = self._srv_set_inspection_light.call_async(req)
-        rclpy.spin_until_future_complete(self, future, timeout_sec=timeout)
-        if future.done():
-            return future.result().success
-        return False
-
-    def call_set_grow_light_intensity(
-        self, intensity_percent: float, timeout: float = 5.0
-    ) -> bool:
-        if not self._srv_set_grow_light_intensity.wait_for_service(timeout_sec=timeout):
-            self.get_logger().warning(
-                "set_grow_light_intensity service not available"
-            )
-            return False
-        req = SetGrowLightIntensity.Request()
-        req.intensity_percent = intensity_percent
-        future = self._srv_set_grow_light_intensity.call_async(req)
-        rclpy.spin_until_future_complete(self, future, timeout_sec=timeout)
-        if future.done():
-            return future.result().success
-        return False
-
-    def call_trigger_inspection(self, timeout: float = 10.0) -> Dict[str, Any]:
-        if not self._srv_trigger_inspection.wait_for_service(timeout_sec=timeout):
-            self.get_logger().warning("trigger_inspection service not available")
-            return {"success": False, "scan_number": 0}
-        req = TriggerInspection.Request()
-        future = self._srv_trigger_inspection.call_async(req)
-        rclpy.spin_until_future_complete(self, future, timeout_sec=timeout)
-        if future.done():
-            res = future.result()
-            return {"success": res.success, "scan_number": res.scan_number}
-        return {"success": False, "scan_number": 0}
-
-    def send_transport_goal(
-        self,
-        target_position: str,
-        feedback_cb: Optional[Callable] = None,
-    ) -> Optional[Any]:
-        """Send a TransportTo action goal and return the future."""
-        if not self._ac_transport_to.wait_for_server(timeout_sec=5.0):
-            self.get_logger().warning("TransportTo action server not available")
-            return None
-        goal = TransportTo.Goal()
-        goal.target_position = target_position
-        return self._ac_transport_to.send_goal_async(goal, feedback_callback=feedback_cb)
-
-    def send_harvest_goal(
-        self,
-        plan: Any,
-        feedback_cb: Optional[Callable] = None,
-    ) -> Optional[Any]:
-        """Send an ExecuteHarvest action goal and return the future."""
-        if not self._ac_execute_harvest.wait_for_server(timeout_sec=5.0):
-            self.get_logger().warning("ExecuteHarvest action server not available")
-            return None
-        goal = ExecuteHarvest.Goal()
-        goal.plan = plan
-        return self._ac_execute_harvest.send_goal_async(goal, feedback_callback=feedback_cb)
+        return future.done() and future.result().success

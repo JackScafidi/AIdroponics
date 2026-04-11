@@ -1,41 +1,15 @@
-# Claudroponics — Calibration Guide
+# AIdroponics V0.1 — Calibration Guide
 
 Perform calibrations in this order after initial assembly and whenever
 accuracy degrades.
 
 ---
 
-## 1. Stepper Motor Calibration (steps/mm)
-
-### Required: ruler or digital calipers
-
-1. Open `hydroponics_transport/config/transport_params.yaml`.
-2. Note current `steps_per_mm` (default 80.0 for 2 mm pitch belt, 20-tooth
-   pulley, 16 microsteps).
-3. Move the carriage to the home position (limit switch).
-4. Command a 100 mm move:
-   ```bash
-   ros2 action send_goal /transport/move hydroponics_msgs/action/MoveToPosition \
-     '{target_position_mm: 100.0, speed_mm_s: 20.0}'
-   ```
-5. Measure actual travel with calipers. If actual = A mm:
-   ```
-   new_steps_per_mm = current_steps_per_mm × 100 / A
-   ```
-6. Update `transport_params.yaml`, rebuild, and repeat until error < 0.5 mm.
-
-### Z-axis (same procedure)
-
-Use `work_station_controller/config/work_station_params.yaml` and the
-`/work_station/move` action.
-
----
-
-## 2. pH Probe Calibration
+## 1. pH Probe Calibration
 
 ### Required: pH 4.0 and pH 7.0 buffer solutions
 
-The firmware uses a two-point linear map:
+The ESP32 firmware uses a two-point linear map:
 ```
 pH = 7.0 + (2.5 - voltage) × slope
 ```
@@ -43,39 +17,44 @@ Default slope = 3.5 (approximately correct for most electrodes at 25 °C).
 
 1. Rinse probe with distilled water.
 2. Immerse in pH 7.0 buffer. Wait 2 minutes.
-3. Read the raw ADC voltage from the dashboard sensor gauges (or ROS topic
-   `/sensors/raw`). Record as `v7`.
+3. Read the raw ADC voltage from the dashboard Sensors page (or ROS topic
+   `/probe/reading` → raw voltage field). Record as `v7`.
 4. Immerse in pH 4.0 buffer. Wait 2 minutes.
 5. Record ADC voltage as `v4`.
 6. Compute calibrated slope:
    ```
    slope = (7.0 - 4.0) / (v4 - v7)
    ```
-7. Update `micro_ros_app.cpp`:
+7. Update `esp32_firmware/src/sensors.cpp`:
    ```cpp
-   static constexpr float PH_SLOPE = <new_slope>;
+   static constexpr float PH_SLOPE      = <new_slope>;
    static constexpr float PH_MIDPOINT_V = <v7>;
    ```
-   Rebuild and flash.
+   Rebuild and flash via PlatformIO.
 
 ### Verification
 
-Immerse in pH 6.5 buffer; dashboard should read 6.4–6.6.
+Immerse in pH 6.5 buffer; dashboard Sensors page should read 6.4–6.6.
+
+### pH Target (per plant profile)
+
+Default targets are defined in `hydroponics_bringup/config/plant_library.yaml`.
+Basil ideal range: 5.5–6.5. The dosing node uses the midpoint as its target.
 
 ---
 
-## 3. EC (Electrical Conductivity) Calibration
+## 2. EC (Electrical Conductivity) Calibration
 
-### Required: 1.413 mS/cm calibration solution (EC standard)
+### Required: 1.413 mS/cm calibration solution
 
 1. Rinse EC probe with distilled water.
 2. Immerse in 1.413 mS/cm standard.
-3. Read the raw ADC voltage from `/sensors/raw`. Record as `v_cal`.
+3. Read the raw ADC voltage from the dashboard or `/probe/reading`. Record as `v_cal`.
 4. Compute factor:
    ```
    ec_factor = 1.413 / v_cal
    ```
-5. Update `micro_ros_app.cpp`:
+5. Update `esp32_firmware/src/sensors.cpp`:
    ```cpp
    static constexpr float EC_FACTOR = <ec_factor>;
    ```
@@ -83,103 +62,124 @@ Immerse in pH 6.5 buffer; dashboard should read 6.4–6.6.
 
 ### Verification
 
-Immerse in 2.76 mS/cm standard; dashboard should read 2.7–2.8.
+Immerse in 2.76 mS/cm standard; dashboard should read 2.7–2.8 mS/cm.
 
 ---
 
-## 4. Load Cell / Harvest Weight Calibration
+## 3. Temperature Sensor Calibration
 
-### Required: known-weight object (e.g., 200 g calibration weight)
+The DS18B20 is factory-calibrated to ±0.5 °C. No firmware adjustment is
+normally needed.
 
-1. Mount the harvest basket (empty) and tare:
-   ```bash
-   ros2 service call /harvest/tare std_srvs/srv/Trigger '{}'
-   ```
-2. Place the calibration weight in the basket.
-3. Read the raw HX711 count from logs or the dashboard.
-4. Update `load_cell.cpp`:
-   ```cpp
-   static constexpr float SCALE_FACTOR = <raw_count> / 200.0f;  // grams
-   ```
-5. Rebuild and flash.
-6. Verify: place known 100 g weight; reading should be 95–105 g.
+To verify: immerse in ice water (0 °C) — reading should be −0.5 to +0.5 °C.
+
+If offset correction is needed, add to `esp32_firmware/src/sensors.cpp`:
+```cpp
+static constexpr float TEMP_OFFSET_C = <offset>;
+```
 
 ---
 
-## 5. Camera Position Calibration
+## 4. AprilTag / Vision Scale Calibration
 
-### Required: a checkerboard or ruler placed in the grow channel
+The vision node uses an AprilTag placed in the grow container to convert pixel
+measurements to real-world centimetres.
 
-1. Set the carriage to the INSPECT position.
-2. Capture a frame from the overhead camera:
-   ```bash
-   ros2 run image_view image_view --ros-args -r /image:=/camera/overhead/image_raw
-   ```
-3. Measure a known physical distance (e.g., 10 cm) in pixel units using an
-   image editor.
-4. Compute `pixels_per_cm`:
-   ```
-   pixels_per_cm = pixel_distance / real_distance_cm
-   ```
-5. Update `vision_params.yaml`:
+### Required: AprilTag (36h11 family, 50 mm × 50 mm printed at known size)
+
+1. Print the AprilTag from `docs/apriltag_50mm.pdf` at exactly 50 mm side length.
+   Laminate it; mount it flat on the reservoir wall or grow tray edge.
+2. Confirm tag size in `hydroponics_bringup/config/v01_system.yaml`:
    ```yaml
-   pixels_per_cm: <value>
+   vision:
+     apriltag_size_mm: 50.0
    ```
+3. Trigger a vision capture from the dashboard Controls page (requires auth).
+4. Check the `PlantMeasurement` topic or Inspection page — `canopy_area_cm2`
+   should be reasonable for the plant size.
 
-### ROI (Region of Interest) Calibration
+### ROI Calibration
 
-Verify that the `roi_*` parameters in `vision_params.yaml` match the actual
-grow channel boundaries in the camera frame. Adjust if the camera has been
-repositioned.
+If the camera has been moved, verify `roi_*` parameters in `v01_system.yaml`
+match the actual grow area visible in the frame. The ROI is used for HSV
+segmentation before NDVI calculation.
 
 ---
 
-## 6. PID Tuning (pH and EC Controllers)
+## 5. Water Level Sensor Calibration
 
-Default gains in `hydroponics_nutrients/config/pid_params.yaml`:
+### Required: ruler or measuring tape
 
-| Parameter | pH | EC |
-|---|---|---|
-| `kp` | 0.8 | 0.6 |
-| `ki` | 0.05 | 0.03 |
-| `kd` | 0.1 | 0.05 |
+The water level node maps ultrasonic sensor distance readings to a percentage.
+Two reference points are required: empty (0%) and full (100%).
 
-### Ziegler–Nichols Quick-Tune Procedure
-
-1. Set `ki = 0`, `kd = 0`.
-2. Increase `kp` until the output oscillates with period T_u and amplitude A_u.
-3. Apply:
+1. Fill the reservoir to the marked "full" line. Trigger a water level reading:
+   ```bash
+   ros2 topic echo /water/level --once
    ```
-   kp = 0.6 × kp_critical
-   ki = 2 × kp / T_u
-   kd = kp × T_u / 8
+   Note the raw `distance_cm` value. Record as `dist_full`.
+2. Empty the reservoir to the minimum safe level. Repeat. Record as `dist_empty`.
+3. Update `hydroponics_bringup/config/v01_system.yaml`:
+   ```yaml
+   water:
+     sensor_distance_empty_cm: <dist_empty>
+     sensor_distance_full_cm: <dist_full>
    ```
-4. Enable anti-windup (`integral_limit` parameter) to prevent integrator
-   saturation during large step changes (e.g., fresh reservoir).
 
-### Normal Operating Ranges
+### Top-off Threshold
 
-| Sensor | Target | Deadband | Dose trigger |
-|---|---|---|---|
-| pH | 6.0–6.5 | ±0.1 | outside target ± deadband |
-| EC | 1.5–2.5 mS/cm | ±0.1 | outside target ± deadband |
-| Temp | 18–24 °C | — | alert only |
+`topoff_threshold_percent` (default 60%) is when the pump activates.
+`topoff_target_percent` (default 90%) is the fill target.
+Both are in `v01_system.yaml`.
 
 ---
 
-## 7. Harvest Servo / Cutter Calibration
+## 6. Dosing Chemistry Verification
 
-1. Command the servo to the home angle (0°):
-   ```bash
-   ros2 topic pub /work_station/servo_angle std_msgs/msg/Float32 '{data: 0.0}'
+The dosing node uses explicit math rather than PID. After initial setup, verify
+the dose calculations are producing correct corrections.
+
+### Procedure
+
+1. Mix a fresh reservoir at known volume (e.g. 10 L at pH 7.5, EC 0.5 mS/cm).
+2. Trigger a probe cycle from the dashboard.
+3. The dosing node should automatically correct pH down and EC up.
+4. After the correction cycle completes (~5–10 min for mixing), trigger another
+   probe cycle and check that pH and EC are within target range.
+
+### Tuning Dose Amounts
+
+If corrections overshoot, reduce `dose_ml_per_unit_error` in `v01_system.yaml`:
+```yaml
+dosing:
+  ph_dose_ml_per_unit:  1.2   # reduce if overshooting pH
+  ec_dose_ml_per_unit:  2.0   # reduce if overshooting EC
+  max_dose_ml:          10.0  # hard cap per single dose
+  min_dose_interval_s:  300   # minimum gap between doses on same pump
+```
+
+---
+
+## 7. NDVI Baseline Calibration
+
+NDVI readings vary with lighting conditions and camera exposure. Establish a
+baseline on a known-healthy plant.
+
+1. With a healthy plant (or a green reference card) in the container, trigger
+   a vision capture.
+2. Note the `mean_ndvi` from the Inspection page or `/ndvi/reading` topic.
+   A healthy basil plant in good lighting should read ≥ 0.35.
+3. If readings are consistently low (< 0.2) despite healthy plants, check:
+   - Blue gel is properly seated on the NoIR camera lens
+   - Both CSI cameras are focused correctly
+   - Lighting is on during capture (the light controller should auto-enable)
+4. NDVI thresholds per plant are defined in `plant_library.yaml`:
+   ```yaml
+   ndvi:
+     healthy_min: 0.3
+     warning_threshold: 0.2
+     critical_threshold: 0.1
    ```
-2. Verify the cutter blade is retracted (safe position).
-3. Command to the cut angle (defined in `work_station_params.yaml`):
-   ```bash
-   ros2 topic pub /work_station/servo_angle std_msgs/msg/Float32 '{data: 90.0}'
-   ```
-4. Confirm a clean cut motion. Adjust `cut_angle_deg` in the config if needed.
-5. Set `home_angle_deg` and `cut_angle_deg` in `work_station_params.yaml`.
 
 ---
 
@@ -191,4 +191,6 @@ Keep a log of calibration dates and values:
 |---|---|---|---|---|
 | — | pH slope | 3.5 | — | Factory default |
 | — | EC factor | 0.6 | — | Factory default |
-| — | Load cell scale | 500.0 | — | Factory default |
+| — | AprilTag size | 50 mm | — | Factory default |
+| — | Water level full | — | — | Site-specific |
+| — | Water level empty | — | — | Site-specific |

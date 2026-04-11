@@ -1,5 +1,5 @@
 # MIT License
-# Copyright (c) 2024 Claudroponics Project
+# Copyright (c) 2026 AIdroponics Project
 #
 # FastAPI router: all REST endpoints and the /ws/stream WebSocket.
 # The RosBridge instance is injected via set_ros_bridge() before the app
@@ -8,14 +8,11 @@
 from __future__ import annotations
 
 import asyncio
-import csv
-import io
 import json
 import logging
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException, WebSocket, WebSocketDisconnect
-from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from hydroponics_dashboard.auth import create_token, revoke_token, verify_password, verify_token
@@ -24,7 +21,7 @@ from hydroponics_dashboard.ros_bridge import RosBridge
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Dependency injection – set by app.py before the server starts
+# Dependency injection
 # ---------------------------------------------------------------------------
 
 _bridge: Optional[RosBridge] = None
@@ -51,15 +48,8 @@ class DoseRequest(BaseModel):
     amount_ml: float = Field(..., gt=0.0, description="Volume to dose in millilitres")
 
 
-class TransportRequest(BaseModel):
-    position: str = Field(
-        ...,
-        description="WORK | GROW | INSPECT | WORK_PLANT_0 .. WORK_PLANT_3",
-    )
-
-
-class EStopRequest(BaseModel):
-    reason: str = Field(default="Manual E-STOP from dashboard")
+class ProbeIntervalRequest(BaseModel):
+    interval_seconds: float = Field(..., gt=0.0, description="Probe cycle interval in seconds")
 
 
 class LoginRequest(BaseModel):
@@ -86,59 +76,45 @@ async def require_auth(authorization: str = Header(None)) -> None:
 router = APIRouter()
 
 # ---------------------------------------------------------------------------
-# Plant profiles (static catalogue – extend as new profiles are added)
+# Plant profiles (V0.1 — NDVI thresholds, no harvest fields)
 # ---------------------------------------------------------------------------
 
 _PLANT_PROFILES: List[Dict[str, Any]] = [
     {
         "name": "basil",
         "display_name": "Basil (Ocimum basilicum)",
-        "stages": {
-            "seedling": {"ph_target": 6.0, "ec_target": 0.8, "duration_days": 7},
-            "vegetative": {"ph_target": 6.0, "ec_target": 1.4, "duration_days": 21},
-            "mature": {"ph_target": 6.0, "ec_target": 1.6, "duration_days": 14},
-        },
-        "harvest_canopy_cm2": 250.0,
-    },
-    {
-        "name": "parsley",
-        "display_name": "Parsley (Petroselinum crispum)",
-        "stages": {
-            "seedling": {"ph_target": 6.0, "ec_target": 0.6, "duration_days": 14},
-            "vegetative": {"ph_target": 6.2, "ec_target": 1.2, "duration_days": 28},
-            "mature": {"ph_target": 6.2, "ec_target": 1.4, "duration_days": 21},
-        },
-        "harvest_canopy_cm2": 300.0,
-    },
-    {
-        "name": "lettuce",
-        "display_name": "Lettuce (Lactuca sativa)",
-        "stages": {
-            "seedling": {"ph_target": 6.0, "ec_target": 0.8, "duration_days": 7},
-            "vegetative": {"ph_target": 6.0, "ec_target": 1.2, "duration_days": 21},
-            "mature": {"ph_target": 6.0, "ec_target": 1.4, "duration_days": 14},
-        },
-        "harvest_canopy_cm2": 400.0,
-    },
-    {
-        "name": "spinach",
-        "display_name": "Spinach (Spinacia oleracea)",
-        "stages": {
-            "seedling": {"ph_target": 6.2, "ec_target": 0.8, "duration_days": 7},
-            "vegetative": {"ph_target": 6.2, "ec_target": 1.6, "duration_days": 21},
-            "mature": {"ph_target": 6.2, "ec_target": 2.0, "duration_days": 14},
-        },
-        "harvest_canopy_cm2": 280.0,
+        "ph": {"ideal": [5.5, 6.5], "acceptable": [5.0, 6.8]},
+        "ec_mS_cm": {"ideal": [1.0, 1.6], "acceptable": [0.8, 2.0]},
+        "temperature_C": {"ideal": [18, 27], "acceptable": [15, 30]},
+        "ndvi": {"healthy_min": 0.3, "warning_threshold": 0.2, "critical_threshold": 0.1},
+        "nutrient_ab_ratio": 1.0,
     },
     {
         "name": "mint",
         "display_name": "Mint (Mentha spicata)",
-        "stages": {
-            "seedling": {"ph_target": 6.5, "ec_target": 0.8, "duration_days": 10},
-            "vegetative": {"ph_target": 6.5, "ec_target": 1.6, "duration_days": 21},
-            "mature": {"ph_target": 6.5, "ec_target": 2.0, "duration_days": 14},
-        },
-        "harvest_canopy_cm2": 220.0,
+        "ph": {"ideal": [6.0, 7.0], "acceptable": [5.5, 7.5]},
+        "ec_mS_cm": {"ideal": [1.2, 1.6], "acceptable": [0.9, 2.0]},
+        "temperature_C": {"ideal": [18, 25], "acceptable": [15, 28]},
+        "ndvi": {"healthy_min": 0.32, "warning_threshold": 0.22, "critical_threshold": 0.12},
+        "nutrient_ab_ratio": 1.0,
+    },
+    {
+        "name": "parsley",
+        "display_name": "Parsley (Petroselinum crispum)",
+        "ph": {"ideal": [5.5, 6.5], "acceptable": [5.0, 7.0]},
+        "ec_mS_cm": {"ideal": [0.8, 1.8], "acceptable": [0.6, 2.2]},
+        "temperature_C": {"ideal": [15, 24], "acceptable": [10, 28]},
+        "ndvi": {"healthy_min": 0.28, "warning_threshold": 0.18, "critical_threshold": 0.08},
+        "nutrient_ab_ratio": 1.0,
+    },
+    {
+        "name": "rosemary",
+        "display_name": "Rosemary (Salvia rosmarinus)",
+        "ph": {"ideal": [5.5, 6.5], "acceptable": [5.0, 7.0]},
+        "ec_mS_cm": {"ideal": [1.0, 1.6], "acceptable": [0.8, 2.0]},
+        "temperature_C": {"ideal": [18, 27], "acceptable": [15, 30]},
+        "ndvi": {"healthy_min": 0.30, "warning_threshold": 0.20, "critical_threshold": 0.10},
+        "nutrient_ab_ratio": 1.0,
     },
 ]
 
@@ -159,7 +135,6 @@ async def login(body: LoginRequest) -> Dict[str, Any]:
 
 @router.get("/api/auth/check", tags=["auth"])
 async def check_auth(authorization: str = Header(None)) -> Dict[str, Any]:
-    """Check whether the current bearer token is valid."""
     if authorization and authorization.startswith("Bearer "):
         token = authorization[7:]
         if verify_token(token):
@@ -169,180 +144,209 @@ async def check_auth(authorization: str = Header(None)) -> Dict[str, Any]:
 
 @router.post("/api/auth/logout", tags=["auth"])
 async def logout(authorization: str = Header(None)) -> Dict[str, Any]:
-    """Revoke the current bearer token."""
     if authorization and authorization.startswith("Bearer "):
         revoke_token(authorization[7:])
     return {"status": "ok"}
 
 
 # ---------------------------------------------------------------------------
-# Status endpoints (public — no auth required)
+# Status / sensor endpoints (public)
 # ---------------------------------------------------------------------------
 
 
 @router.get("/api/status", tags=["status"])
 async def get_status(bridge: RosBridge = Depends(get_bridge)) -> Dict[str, Any]:
-    """Return system state, transport position, and active BT node."""
-    bt = bridge.bt_status
-    transport = bridge.transport_status
-    light = bridge.light_status
+    probe = bridge.probe_reading
+    water = bridge.water_level
+    plant = bridge.plant_status
     return {
-        "system_state": bt["system_state"] if bt else "UNKNOWN",
-        "active_node_path": bt["active_node_path"] if bt else "",
-        "transport_position": transport["current_position"] if transport else "UNKNOWN",
-        "transport_moving": transport["is_moving"] if transport else False,
-        "light_intensity_percent": light["grow_intensity_percent"] if light else 0.0,
-        "light_schedule_state": light["schedule_state"] if light else "unknown",
+        "ph": probe["ph"] if probe else None,
+        "ec_mS_cm": probe["ec_mS_cm"] if probe else None,
+        "temperature_C": probe["temperature_C"] if probe else None,
+        "water_level_percent": water["level_percent"] if water else None,
+        "plant_status_code": plant["status_code"] if plant else None,
+        "plant_summary": plant["summary"] if plant else "Unknown",
     }
 
 
-@router.get("/api/nutrients", tags=["sensors"])
-async def get_nutrients(bridge: RosBridge = Depends(get_bridge)) -> Dict[str, Any]:
-    """Return current pH, EC, temperature, targets, and PID state."""
-    data = bridge.nutrient_status
+@router.get("/api/probe/latest", tags=["sensors"])
+async def get_probe_latest(bridge: RosBridge = Depends(get_bridge)) -> Dict[str, Any]:
+    data = bridge.probe_reading
     if data is None:
-        raise HTTPException(status_code=503, detail="No nutrient data available yet")
+        raise HTTPException(status_code=503, detail="No probe data available yet")
     return data
 
 
-@router.get("/api/plants", tags=["plants"])
-async def get_plants(bridge: RosBridge = Depends(get_bridge)) -> List[Dict[str, Any]]:
-    """Return per-position plant status, growth stage, and health."""
-    return bridge.plant_status
-
-
-@router.get("/api/harvests", tags=["plants"])
-async def get_harvests(bridge: RosBridge = Depends(get_bridge)) -> Dict[str, Any]:
-    """Return harvest log derived from cached yield metrics and plant data."""
-    metrics = bridge.yield_metrics
-    plants = bridge.plant_status
-    harvest_summary = []
-    for plant in plants:
-        if plant.get("cut_cycle_number", 0) > 0:
-            harvest_summary.append(
-                {
-                    "position_index": plant["position_index"],
-                    "plant_id": plant["plant_id"],
-                    "plant_profile": plant["plant_profile"],
-                    "cut_cycles_completed": plant["cut_cycle_number"],
-                    "last_harvest": plant["last_harvest"],
-                }
-            )
-    return {
-        "harvest_log": harvest_summary,
-        "yield_totals": metrics,
-    }
-
-
-@router.get("/api/analytics", tags=["analytics"])
-async def get_analytics(bridge: RosBridge = Depends(get_bridge)) -> Dict[str, Any]:
-    """Return yield metrics."""
-    data = bridge.yield_metrics
+@router.get("/api/ndvi/latest", tags=["sensors"])
+async def get_ndvi_latest(bridge: RosBridge = Depends(get_bridge)) -> Dict[str, Any]:
+    data = bridge.ndvi_reading
     if data is None:
-        return {
-            "total_yield_grams": 0.0,
-            "yield_per_watt_hour": 0.0,
-            "yield_per_liter_nutrient": 0.0,
-            "cost_per_gram": 0.0,
-            "total_harvests": 0,
-            "total_crop_cycles": 0,
-            "timestamp": None,
-        }
+        raise HTTPException(status_code=503, detail="No NDVI data available yet")
     return data
 
 
-@router.get("/api/inspections/latest", tags=["inspection"])
-async def get_latest_inspection(
-    bridge: RosBridge = Depends(get_bridge),
-) -> Dict[str, Any]:
-    """Return the most recent inspection result."""
-    data = bridge.inspection_result
+@router.get("/api/water/latest", tags=["sensors"])
+async def get_water_latest(bridge: RosBridge = Depends(get_bridge)) -> Dict[str, Any]:
+    data = bridge.water_level
     if data is None:
-        raise HTTPException(
-            status_code=404, detail="No inspection data available yet"
-        )
+        raise HTTPException(status_code=503, detail="No water level data available yet")
+    return data
+
+
+@router.get("/api/plant/measurement/latest", tags=["sensors"])
+async def get_plant_measurement(bridge: RosBridge = Depends(get_bridge)) -> Dict[str, Any]:
+    data = bridge.plant_measurement
+    if data is None:
+        raise HTTPException(status_code=503, detail="No plant measurement available yet")
+    return data
+
+
+@router.get("/api/diagnostics/latest", tags=["diagnostics"])
+async def get_diagnostic_latest(bridge: RosBridge = Depends(get_bridge)) -> Dict[str, Any]:
+    data = bridge.diagnostic_report
+    if data is None:
+        raise HTTPException(status_code=503, detail="No diagnostic report available yet")
     return data
 
 
 # ---------------------------------------------------------------------------
-# Control endpoints
+# History endpoints (public) — range param filters in memory
+# ---------------------------------------------------------------------------
+
+_RANGE_SECONDS = {"1h": 3600, "24h": 86400, "7d": 604800, "30d": 2592000, "all": None}
+
+
+def _filter_by_range(records: list, range_str: str) -> list:
+    from datetime import datetime, timezone
+    secs = _RANGE_SECONDS.get(range_str)
+    if secs is None:
+        return records
+    now = datetime.now(timezone.utc).timestamp()
+    cutoff = now - secs
+    result = []
+    for r in records:
+        try:
+            ts = datetime.fromisoformat(r["timestamp"].replace("Z", "+00:00")).timestamp()
+            if ts >= cutoff:
+                result.append(r)
+        except Exception:
+            result.append(r)
+    return result
+
+
+@router.get("/api/probe_history", tags=["history"])
+async def get_probe_history(
+    range: str = "24h", bridge: RosBridge = Depends(get_bridge)
+) -> Dict[str, Any]:
+    return {"readings": _filter_by_range(bridge.probe_history, range)}
+
+
+@router.get("/api/dosing_history", tags=["history"])
+async def get_dosing_history(
+    range: str = "24h", bridge: RosBridge = Depends(get_bridge)
+) -> Dict[str, Any]:
+    return {"events": _filter_by_range(bridge.dosing_history, range)}
+
+
+@router.get("/api/ndvi_history", tags=["history"])
+async def get_ndvi_history(
+    range: str = "7d", bridge: RosBridge = Depends(get_bridge)
+) -> Dict[str, Any]:
+    return {"readings": _filter_by_range(bridge.ndvi_history, range)}
+
+
+@router.get("/api/water/topoff_history", tags=["history"])
+async def get_topoff_history(bridge: RosBridge = Depends(get_bridge)) -> Dict[str, Any]:
+    return {"events": bridge.topoff_history}
+
+
+# ---------------------------------------------------------------------------
+# Plant profiles
 # ---------------------------------------------------------------------------
 
 
-@router.post("/api/controls/transport/{position}", tags=["controls"], dependencies=[Depends(require_auth)])
-async def control_transport(
-    position: str, bridge: RosBridge = Depends(get_bridge)
-) -> Dict[str, Any]:
-    """Trigger a TransportTo action goal."""
-    valid_positions = {
-        "WORK",
-        "GROW",
-        "INSPECT",
-        "WORK_PLANT_0",
-        "WORK_PLANT_1",
-        "WORK_PLANT_2",
-        "WORK_PLANT_3",
-    }
-    pos_upper = position.upper()
-    if pos_upper not in valid_positions:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid position '{position}'. Valid: {sorted(valid_positions)}",
-        )
-    goal_future = bridge.send_transport_goal(pos_upper)
-    if goal_future is None:
-        raise HTTPException(
-            status_code=503, detail="TransportTo action server not available"
-        )
-    return {"status": "accepted", "target_position": pos_upper}
+@router.get("/api/profiles", tags=["profiles"])
+async def get_profiles() -> List[Dict[str, Any]]:
+    return _PLANT_PROFILES
 
 
-@router.post("/api/controls/inspect", tags=["controls"], dependencies=[Depends(require_auth)])
-async def control_inspect(bridge: RosBridge = Depends(get_bridge)) -> Dict[str, Any]:
-    """Trigger a manual inspection cycle."""
-    result = await asyncio.get_event_loop().run_in_executor(
-        None, bridge.call_trigger_inspection
+@router.get("/api/profiles/{name}", tags=["profiles"])
+async def get_profile(name: str) -> Dict[str, Any]:
+    for profile in _PLANT_PROFILES:
+        if profile["name"] == name.lower():
+            return profile
+    raise HTTPException(status_code=404, detail=f"Profile '{name}' not found")
+
+
+# ---------------------------------------------------------------------------
+# Control endpoints (auth required)
+# ---------------------------------------------------------------------------
+
+
+@router.post("/api/controls/trigger_probe", tags=["controls"], dependencies=[Depends(require_auth)])
+async def control_trigger_probe(bridge: RosBridge = Depends(get_bridge)) -> Dict[str, Any]:
+    """Trigger an immediate probe cycle."""
+    success = await asyncio.get_event_loop().run_in_executor(
+        None, bridge.call_trigger_probe
     )
-    if not result["success"]:
-        raise HTTPException(
-            status_code=503, detail="Inspection service call failed or timed out"
-        )
-    return {"status": "ok", "scan_number": result["scan_number"]}
+    if not success:
+        raise HTTPException(status_code=503, detail="TriggerProbe service failed or timed out")
+    return {"status": "ok"}
 
 
-@router.post("/api/controls/harvest", tags=["controls"], dependencies=[Depends(require_auth)])
-async def control_harvest(bridge: RosBridge = Depends(get_bridge)) -> Dict[str, Any]:
-    """Trigger a manual harvest cycle (sends ExecuteHarvest action with empty plan)."""
-    from hydroponics_msgs.msg import HarvestPlan  # type: ignore
+@router.post("/api/controls/trigger_aeration", tags=["controls"], dependencies=[Depends(require_auth)])
+async def control_trigger_aeration(bridge: RosBridge = Depends(get_bridge)) -> Dict[str, Any]:
+    """Trigger an immediate aeration cycle."""
+    success = await asyncio.get_event_loop().run_in_executor(
+        None, bridge.call_trigger_aeration
+    )
+    if not success:
+        raise HTTPException(status_code=503, detail="TriggerAeration service failed or timed out")
+    return {"status": "ok"}
 
-    plan = HarvestPlan()
-    goal_future = bridge.send_harvest_goal(plan)
-    if goal_future is None:
-        raise HTTPException(
-            status_code=503, detail="ExecuteHarvest action server not available"
-        )
-    return {"status": "accepted"}
+
+@router.post("/api/controls/set_probe_interval", tags=["controls"], dependencies=[Depends(require_auth)])
+async def control_set_probe_interval(
+    body: ProbeIntervalRequest, bridge: RosBridge = Depends(get_bridge)
+) -> Dict[str, Any]:
+    """Set probe cycle interval in seconds (minimum enforced by node)."""
+    applied = await asyncio.get_event_loop().run_in_executor(
+        None, lambda: bridge.call_set_probe_interval(body.interval_seconds)
+    )
+    return {"status": "ok", "applied_interval_seconds": applied}
+
+
+@router.post("/api/controls/capture_vision", tags=["controls"], dependencies=[Depends(require_auth)])
+async def control_capture_vision(bridge: RosBridge = Depends(get_bridge)) -> Dict[str, Any]:
+    """Trigger an immediate vision capture cycle."""
+    success = await asyncio.get_event_loop().run_in_executor(
+        None, bridge.call_capture_vision
+    )
+    if not success:
+        raise HTTPException(status_code=503, detail="CaptureVision service failed or timed out")
+    return {"status": "ok"}
 
 
 @router.post("/api/controls/dose", tags=["controls"], dependencies=[Depends(require_auth)])
 async def control_dose(
     body: DoseRequest, bridge: RosBridge = Depends(get_bridge)
 ) -> Dict[str, Any]:
-    """Manually dose a specific pump."""
+    """Publish a manual dose command.  The dosing node honours safety limits."""
     valid_pumps = {"ph_up", "ph_down", "nutrient_a", "nutrient_b"}
     if body.pump_id not in valid_pumps:
         raise HTTPException(
             status_code=400,
             detail=f"Invalid pump_id '{body.pump_id}'. Valid: {sorted(valid_pumps)}",
         )
-    success = await asyncio.get_event_loop().run_in_executor(
-        None,
-        lambda: bridge.call_force_dose(body.pump_id, body.amount_ml),
-    )
-    if not success:
-        raise HTTPException(
-            status_code=503, detail="ForceDose service call failed or timed out"
-        )
+    # Publish a DosingEvent command on a control topic (dosing_node subscribes)
+    from hydroponics_msgs.msg import DosingEvent  # type: ignore
+    pub = bridge.create_publisher(DosingEvent, "/dosing/manual_command", 10)
+    msg = DosingEvent()
+    msg.pump_id = body.pump_id
+    msg.dose_mL = body.amount_ml
+    msg.reason = "manual_dashboard"
+    pub.publish(msg)
+    bridge.destroy_publisher(pub)
     return {"status": "ok", "pump_id": body.pump_id, "amount_ml": body.amount_ml}
 
 
@@ -352,120 +356,34 @@ async def control_light(
 ) -> Dict[str, Any]:
     """Override grow light intensity (0–100 %)."""
     if not 0.0 <= intensity <= 100.0:
-        raise HTTPException(
-            status_code=400, detail="Intensity must be between 0 and 100"
-        )
-    success = await asyncio.get_event_loop().run_in_executor(
-        None,
-        lambda: bridge.call_set_grow_light_intensity(intensity),
-    )
-    if not success:
-        raise HTTPException(
-            status_code=503,
-            detail="SetGrowLightIntensity service call failed or timed out",
-        )
+        raise HTTPException(status_code=400, detail="Intensity must be between 0 and 100")
+    # hydroponics_lighting subscribes to /lighting/set_intensity (Float32)
+    from std_msgs.msg import Float32  # type: ignore
+    pub = bridge.create_publisher(Float32, "/lighting/set_intensity", 10)
+    msg = Float32()
+    msg.data = float(intensity)
+    pub.publish(msg)
+    bridge.destroy_publisher(pub)
     return {"status": "ok", "intensity_percent": intensity}
 
 
 @router.post("/api/controls/estop", tags=["controls"], dependencies=[Depends(require_auth)])
 async def control_estop(
-    body: Optional[EStopRequest] = None,
     bridge: RosBridge = Depends(get_bridge),
 ) -> Dict[str, Any]:
     """Publish a critical emergency-stop alert."""
     from hydroponics_msgs.msg import SystemAlert  # type: ignore
-    from rclpy.qos import QoSProfile, ReliabilityPolicy
-
-    reason = (body.reason if body else None) or "Manual E-STOP from dashboard"
-
-    # Use a one-shot publisher on the bridge node.
-    pub = bridge.create_publisher(
-        SystemAlert,
-        "/system_alert",
-        10,
-    )
+    pub = bridge.create_publisher(SystemAlert, "/system_alert", 10)
     msg = SystemAlert()
     msg.header.stamp = bridge.get_clock().now().to_msg()
     msg.alert_type = "estop"
     msg.severity = "critical"
-    msg.message = reason
+    msg.message = "Manual E-STOP from dashboard"
     msg.recommended_action = "Inspect system immediately. Reset when safe."
     pub.publish(msg)
     bridge.destroy_publisher(pub)
-
-    logger.warning("E-STOP published: %s", reason)
-    return {"status": "estop_published", "reason": reason}
-
-
-# ---------------------------------------------------------------------------
-# Export
-# ---------------------------------------------------------------------------
-
-
-@router.get("/api/export/data", tags=["export"])
-async def export_data(
-    format: str = "csv", bridge: RosBridge = Depends(get_bridge)
-) -> StreamingResponse:
-    """Export nutrient readings as CSV (or JSON)."""
-    history = bridge.nutrient_history
-
-    if format.lower() == "json":
-        content = json.dumps(history, indent=2)
-        return StreamingResponse(
-            iter([content]),
-            media_type="application/json",
-            headers={
-                "Content-Disposition": "attachment; filename=nutrient_history.json"
-            },
-        )
-
-    # Default: CSV
-    output = io.StringIO()
-    fieldnames = [
-        "timestamp",
-        "ph_current",
-        "ec_current",
-        "temperature_c",
-        "ph_target",
-        "ec_target",
-        "ph_pid_output",
-        "ec_pid_output",
-        "a_b_ratio",
-        "growth_stage",
-        "days_since_planting",
-    ]
-    writer = csv.DictWriter(output, fieldnames=fieldnames, extrasaction="ignore")
-    writer.writeheader()
-    for row in history:
-        writer.writerow(row)
-    output.seek(0)
-    return StreamingResponse(
-        iter([output.read()]),
-        media_type="text/csv",
-        headers={
-            "Content-Disposition": "attachment; filename=nutrient_history.csv"
-        },
-    )
-
-
-# ---------------------------------------------------------------------------
-# Profiles
-# ---------------------------------------------------------------------------
-
-
-@router.get("/api/profiles", tags=["profiles"])
-async def get_profiles() -> List[Dict[str, Any]]:
-    """List all available plant profiles."""
-    return _PLANT_PROFILES
-
-
-@router.get("/api/profiles/{name}", tags=["profiles"])
-async def get_profile(name: str) -> Dict[str, Any]:
-    """Return a specific plant profile by name."""
-    for profile in _PLANT_PROFILES:
-        if profile["name"] == name.lower():
-            return profile
-    raise HTTPException(status_code=404, detail=f"Profile '{name}' not found")
+    logger.warning("E-STOP published from dashboard")
+    return {"status": "estop_published"}
 
 
 # ---------------------------------------------------------------------------
@@ -475,48 +393,37 @@ async def get_profile(name: str) -> Dict[str, Any]:
 
 @router.websocket("/ws/stream")
 async def ws_stream(websocket: WebSocket, bridge: RosBridge = Depends(get_bridge)) -> None:
-    """Stream sensor data and BT status to the client at ~1 Hz.
-
-    Additionally, the RosBridge will push event-driven updates whenever a
-    topic callback fires.  The client receives both the periodic heartbeat
-    and immediate event pushes.
-    """
+    """Stream sensor data to the client at ~1 Hz, plus immediate event pushes."""
     await websocket.accept()
     logger.info("WebSocket client connected: %s", websocket.client)
 
-    # Queue for thread-safe message delivery from ROS callbacks.
     queue: asyncio.Queue[str] = asyncio.Queue(maxsize=256)
-
     loop = asyncio.get_event_loop()
 
     def _sender(text: str) -> None:
-        """Called from the ROS spin thread; schedules delivery on the event loop."""
         try:
             loop.call_soon_threadsafe(queue.put_nowait, text)
         except Exception:
             pass
 
     bridge.register_ws_sender(_sender)
-
-    # Send an immediate full snapshot so the UI has data right away.
     bridge.broadcast_snapshot()
 
     try:
         while True:
-            # Wait up to 1 second for a queued message; if none, send heartbeat.
             try:
                 message = await asyncio.wait_for(queue.get(), timeout=1.0)
                 await websocket.send_text(message)
             except asyncio.TimeoutError:
-                # 1 Hz heartbeat with current snapshot.
                 heartbeat = json.dumps(
                     {
                         "type": "heartbeat",
                         "data": {
-                            "nutrient_status": bridge.nutrient_status,
-                            "bt_status": bridge.bt_status,
-                            "transport_status": bridge.transport_status,
-                            "light_status": bridge.light_status,
+                            "probe_reading": bridge.probe_reading,
+                            "ndvi_reading": bridge.ndvi_reading,
+                            "water_level": bridge.water_level,
+                            "plant_status": bridge.plant_status,
+                            "diagnostic_report": bridge.diagnostic_report,
                         },
                     },
                     default=str,
