@@ -1,5 +1,5 @@
 # MIT License
-# Copyright (c) 2026 AIdroponics Project
+# Copyright (c) 2026 Autoponics Project
 """Integration test: declining NDVI sequence → probe interval decreased."""
 
 import pytest

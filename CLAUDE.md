@@ -1,4 +1,4 @@
-# AIdroponics Project
+# Autoponics Project
 
 ## Overview
 Autonomous hydroponics farming system — ROS2 Humble, single-plant validation platform (V0.1) with dual-camera NDVI+RGB vision, explicit-chemistry A/B auto-dosing, servo-driven probe/aeration cycle, and reactive water management. Running on Raspberry Pi CM4 with ESP32 co-processor.

@@ -1,5 +1,5 @@
 # MIT License
-# Copyright (c) 2026 AIdroponics Project
+# Copyright (c) 2026 Autoponics Project
 #
 # V0.1 single-plant launch file.
 # Brings up all nodes for the minimal single-plant analysis platform:

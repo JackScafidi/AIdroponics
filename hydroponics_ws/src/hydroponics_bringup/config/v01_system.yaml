@@ -1,4 +1,4 @@
-# AIdroponics V0.1 System Configuration
+# Autoponics V0.1 System Configuration
 # All tunable parameters for all V0.1 subsystems.
 # No magic numbers in node code — every threshold, timing, and calibration
 # value must come from this file.
@@ -62,7 +62,7 @@ camera:
   # Increased capture interval during NDVI early-warning state (seconds)
   capture_interval_alert_seconds: 600.0  # 10 minutes
   # Directory for storing captured frame pairs
-  capture_storage_path: "~/.aidroponics/captures/"
+  capture_storage_path: "~/.autoponics/captures/"
 
 # ---------------------------------------------------------------------------
 # AprilTag Calibration
@@ -148,7 +148,7 @@ water:
   # Wait time after fill before triggering probe (seconds)
   post_fill_mixing_delay_seconds: 60.0
   # Path for water consumption log CSV
-  log_path: "~/.aidroponics/water_log.csv"
+  log_path: "~/.autoponics/water_log.csv"
   # Multiplier to detect "above normal" consumption rate (fraction above rolling average)
   consumption_alert_multiplier: 1.5
 

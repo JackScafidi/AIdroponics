@@ -1,8 +1,8 @@
-# AIdroponics — System Architecture (V0.1)
+# Autoponics — System Architecture (V0.1)
 
 ## Overview
 
-AIdroponics V0.1 is a single-plant deep-water-culture (DWC) validation platform
+Autoponics V0.1 is a single-plant deep-water-culture (DWC) validation platform
 with dual-camera NDVI+RGB vision, explicit-chemistry A/B auto-dosing, servo-driven
 probe/aeration cycling, and reactive water management. It runs on a Raspberry Pi
 CM4 with an ESP32 co-processor handling all hardware I/O via micro-ROS.

@@ -1,5 +1,5 @@
 # MIT License
-# Copyright (c) 2026 AIdroponics Project
+# Copyright (c) 2026 Autoponics Project
 #
 # ROS2 bridge node: subscribes to all V0.1 hydroponics topics, exposes latest
 # values thread-safely, holds service clients for control endpoints,

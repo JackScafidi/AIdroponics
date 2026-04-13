@@ -1,7 +1,7 @@
 # MIT License
-# Copyright (c) 2026 AIdroponics Project
+# Copyright (c) 2026 Autoponics Project
 
-"""ROS2 dual-camera vision node for AIdroponics V0.1 single-plant platform.
+"""ROS2 dual-camera vision node for Autoponics V0.1 single-plant platform.
 
 Purpose
 -------
@@ -85,7 +85,7 @@ class PlantVisionNode(Node):
         self.declare_parameter('camera.ndvi.device_id', 1)
         self.declare_parameter('camera.capture_interval_seconds', 1800.0)
         self.declare_parameter('camera.capture_interval_alert_seconds', 600.0)
-        self.declare_parameter('camera.capture_storage_path', '~/.aidroponics/captures/')
+        self.declare_parameter('camera.capture_storage_path', '~/.autoponics/captures/')
         self.declare_parameter('apriltag.family', 'tag36h11')
         self.declare_parameter('apriltag.tag_size_m', 0.05)
         self.declare_parameter('apriltag.tag_separation_m', 0.30)

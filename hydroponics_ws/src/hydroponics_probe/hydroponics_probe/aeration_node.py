@@ -1,7 +1,7 @@
 # MIT License
-# Copyright (c) 2026 AIdroponics Project
+# Copyright (c) 2026 Autoponics Project
 
-"""ROS2 aeration cycle node for AIdroponics V0.1 single-plant platform.
+"""ROS2 aeration cycle node for Autoponics V0.1 single-plant platform.
 
 Purpose
 -------

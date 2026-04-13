@@ -1,5 +1,5 @@
 # MIT License
-# Copyright (c) 2026 AIdroponics Project
+# Copyright (c) 2026 Autoponics Project
 """Integration test: top-off event → diluted EC → dosing node issues correct A+B doses.
 
 Tests the data flow:

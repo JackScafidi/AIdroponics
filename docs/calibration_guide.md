@@ -1,4 +1,4 @@
-# AIdroponics V0.1 — Calibration Guide
+# Autoponics V0.1 — Calibration Guide
 
 Perform calibrations in this order after initial assembly and whenever
 accuracy degrades.

@@ -1,4 +1,4 @@
-# AIdroponics V0.1 Refactor — Progress Tracker
+# Autoponics V0.1 Refactor — Progress Tracker
 
 Resume here if generation is interrupted. Check task status and pick up from the first incomplete item.
 
@@ -92,8 +92,8 @@ In `hydroponics_bringup/config/`:
 ## Phase 8 — Documentation & Git
 - [x] Update project README to reflect V0.1 architecture
 - [x] Update CLAUDE.md
-- [ ] `git add -A && git commit -m "refactor: V0.1 — single-plant analysis platform with NDVI + RGB vision, A/B auto-dosing, and water management"`
-- [ ] `git push`
+- [x] `git add -A && git commit -m "refactor: V0.1 — single-plant analysis platform with NDVI + RGB vision, A/B auto-dosing, and water management"`
+- [x] `git push`
 
 ---
 

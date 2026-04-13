@@ -1,4 +1,4 @@
-# Plant parameter library for AIdroponics V0.1
+# Plant parameter library for Autoponics V0.1
 # Each entry defines ideal and acceptable bands for pH, EC, and temperature,
 # plus NDVI health thresholds and nutrient A:B dosing ratio.
 #

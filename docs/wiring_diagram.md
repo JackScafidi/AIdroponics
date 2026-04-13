@@ -1,4 +1,4 @@
-# AIdroponics V0.1 — Wiring Diagram & Pin Reference
+# Autoponics V0.1 — Wiring Diagram & Pin Reference
 
 ## ESP32 Pin Assignments
 

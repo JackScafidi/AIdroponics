@@ -1,4 +1,4 @@
-"""Authentication for the AIdroponics dashboard.
+"""Authentication for the Autoponics dashboard.
 
 Password is stored as a salted SHA-256 hash — never in plain text.
 Control endpoints require a valid bearer token obtained via /api/auth/login.
@@ -9,7 +9,7 @@ import hashlib
 import secrets
 from typing import Set
 
-_SALT = "aidroponics_auth_salt_v1"
+_SALT = "autoponics_auth_salt_v1"
 _PASSWORD_HASH = "0b4a4c945b77c4eb0aa2bc61ffd1b294693484d3a1092fdb886fb0fcf0143126"
 
 _active_tokens: Set[str] = set()

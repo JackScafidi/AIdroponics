@@ -1,5 +1,5 @@
 # MIT License
-# Copyright (c) 2026 AIdroponics Project
+# Copyright (c) 2026 Autoponics Project
 """Integration test: vision measurement → diagnostic rule fires correctly.
 
 Tests the data flow:

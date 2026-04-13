@@ -1,7 +1,7 @@
 # MIT License
-# Copyright (c) 2026 AIdroponics Project
+# Copyright (c) 2026 Autoponics Project
 
-"""ROS2 water level node for AIdroponics V0.1 single-plant platform.
+"""ROS2 water level node for Autoponics V0.1 single-plant platform.
 
 Purpose
 -------
@@ -63,7 +63,7 @@ class WaterLevelNode(Node):
         self.declare_parameter('water.fill_poll_interval_seconds', 1.0)
         self.declare_parameter('water.max_fill_time_seconds', 120.0)
         self.declare_parameter('water.post_fill_mixing_delay_seconds', 60.0)
-        self.declare_parameter('water.log_path', '~/.aidroponics/water_log.csv')
+        self.declare_parameter('water.log_path', '~/.autoponics/water_log.csv')
         self.declare_parameter('water.consumption_alert_multiplier', 1.5)
         self.declare_parameter('bin.cross_section_cm2', 900.0)
         self.declare_parameter('bin.depth_cm', 25.0)

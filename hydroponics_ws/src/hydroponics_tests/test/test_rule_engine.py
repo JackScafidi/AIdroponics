@@ -1,5 +1,5 @@
 # MIT License
-# Copyright (c) 2026 AIdroponics Project
+# Copyright (c) 2026 Autoponics Project
 """Unit tests for the diagnostic rule engine — 10 defined scenarios."""
 
 import pytest

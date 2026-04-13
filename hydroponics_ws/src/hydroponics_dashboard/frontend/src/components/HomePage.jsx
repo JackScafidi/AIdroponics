@@ -130,7 +130,7 @@ export default function HomePage({ onNavigate, connected, probeReading, ndviRead
               </svg>
             </div>
             <span style={{ fontSize: 16, fontWeight: 600, color: 'rgba(255,255,255,0.8)', letterSpacing: '-0.02em' }}>
-              AIdroponics
+              Autoponics
             </span>
           </div>
           {/* Status */}
@@ -179,7 +179,7 @@ export default function HomePage({ onNavigate, connected, probeReading, ndviRead
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
           }}>
-            AIdroponics
+            Autoponics
           </h1>
           <p style={{
             fontSize: 18, lineHeight: 1.7, color: 'rgba(255,255,255,0.5)',

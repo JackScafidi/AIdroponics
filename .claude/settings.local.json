@@ -17,7 +17,10 @@
       "Bash(cp -r 'C:/Users/jacks/Documents/Claude Project/ClaudroponicsProject/hydroponics_ws/src/hydroponics_transport' 'C:/Users/jacks/Documents/Claude Project/ClaudroponicsProject/hydroponics_ws/src/future/')",
       "Bash(cp -r 'C:/Users/jacks/Documents/Claude Project/ClaudroponicsProject/hydroponics_ws/src/hydroponics_bt' 'C:/Users/jacks/Documents/Claude Project/ClaudroponicsProject/hydroponics_ws/src/future/')",
       "Bash(cp -r 'C:/Users/jacks/Documents/Claude Project/ClaudroponicsProject/hydroponics_ws/src/hydroponics_harvest' 'C:/Users/jacks/Documents/Claude Project/ClaudroponicsProject/hydroponics_ws/src/future/')",
-      "Bash(cp -r 'C:/Users/jacks/Documents/Claude Project/ClaudroponicsProject/hydroponics_ws/src/hydroponics_work_station' 'C:/Users/jacks/Documents/Claude Project/ClaudroponicsProject/hydroponics_ws/src/future/')"
+      "Bash(cp -r 'C:/Users/jacks/Documents/Claude Project/ClaudroponicsProject/hydroponics_ws/src/hydroponics_work_station' 'C:/Users/jacks/Documents/Claude Project/ClaudroponicsProject/hydroponics_ws/src/future/')",
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "Bash(xargs sed:*)"
     ]
   }
 }

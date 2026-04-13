@@ -1,7 +1,7 @@
 # MIT License
-# Copyright (c) 2026 AIdroponics Project
+# Copyright (c) 2026 Autoponics Project
 
-"""ROS2 LED status indicator node for AIdroponics V0.1.
+"""ROS2 LED status indicator node for Autoponics V0.1.
 
 Purpose
 -------

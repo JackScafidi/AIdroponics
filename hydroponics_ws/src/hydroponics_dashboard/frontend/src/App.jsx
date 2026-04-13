@@ -93,7 +93,7 @@ const NAV_ITEMS = [
 ]
 
 const PAGE_META = {
-  dashboard:  { title: 'AIdroponics', accent: 'Dashboard', subtitle: 'V0.1 Single-Plant \u2014 NDVI + RGB Vision \u00b7 Auto-Dosing \u00b7 Water Management' },
+  dashboard:  { title: 'Autoponics', accent: 'Dashboard', subtitle: 'V0.1 Single-Plant \u2014 NDVI + RGB Vision \u00b7 Auto-Dosing \u00b7 Water Management' },
   sensors:    { title: 'System',      accent: 'Sensors',   subtitle: 'Real-time pH, EC, temperature, NDVI, and water level' },
   analytics:  { title: 'Plant',       accent: 'Analytics', subtitle: 'NDVI trends, vision measurements, and water consumption', tabs: ['NDVI Trends', 'Plant Health', 'Water & Dosing'] },
   nutrients:  { title: 'Probe &',     accent: 'Dosing',    subtitle: 'Probe reading history and auto-dosing event log' },
@@ -133,7 +133,7 @@ export default function App() {
   const [unreadAlerts, setUnread]           = useState(0)
   const [sidebarHover, setSidebarHover]     = useState(null)
   const [dropletsVisible, setDropletsVisible] = useState(false)
-  const [authToken, setAuthToken]           = useState(() => localStorage.getItem('aidroponics_auth_token'))
+  const [authToken, setAuthToken]           = useState(() => localStorage.getItem('autoponics_auth_token'))
 
   const wsRef = useRef(null)
   const reconnectTimer = useRef(null)
@@ -209,7 +209,7 @@ export default function App() {
       .then(data => {
         if (!data.authenticated) {
           setAuthToken(null)
-          localStorage.removeItem('aidroponics_auth_token')
+          localStorage.removeItem('autoponics_auth_token')
         }
       })
       .catch(() => {})
@@ -217,7 +217,7 @@ export default function App() {
 
   const handleLogin = (token) => {
     setAuthToken(token)
-    localStorage.setItem('aidroponics_auth_token', token)
+    localStorage.setItem('autoponics_auth_token', token)
   }
 
   const handleLogout = () => {
@@ -228,7 +228,7 @@ export default function App() {
       }).catch(() => {})
     }
     setAuthToken(null)
-    localStorage.removeItem('aidroponics_auth_token')
+    localStorage.removeItem('autoponics_auth_token')
   }
 
   // Hide droplets on every page/tab change, then fade in after glass renders
@@ -324,7 +324,7 @@ export default function App() {
       }}>
         {/* Logo — navigates to Home */}
         <button
-          title="AIdroponics Home"
+          title="Autoponics Home"
           onClick={() => handleNav('home')}
           onMouseEnter={() => setSidebarHover('home')}
           onMouseLeave={() => setSidebarHover(null)}

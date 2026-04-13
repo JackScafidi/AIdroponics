@@ -1,7 +1,7 @@
 # MIT License
-# Copyright (c) 2026 AIdroponics Project
+# Copyright (c) 2026 Autoponics Project
 
-"""ROS2 plant health analyzer node for AIdroponics V0.1.
+"""ROS2 plant health analyzer node for Autoponics V0.1.
 
 Purpose
 -------

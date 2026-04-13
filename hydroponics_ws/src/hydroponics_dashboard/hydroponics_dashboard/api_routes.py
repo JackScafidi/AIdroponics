@@ -1,5 +1,5 @@
 # MIT License
-# Copyright (c) 2026 AIdroponics Project
+# Copyright (c) 2026 Autoponics Project
 #
 # FastAPI router: all REST endpoints and the /ws/stream WebSocket.
 # The RosBridge instance is injected via set_ros_bridge() before the app

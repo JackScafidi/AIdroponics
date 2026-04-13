@@ -3,8 +3,8 @@
 <package format="3">
   <name>hydroponics_water</name>
   <version>0.1.0</version>
-  <description>V0.1 water level sensing and auto top-off node for AIdroponics.</description>
-  <maintainer email="aidroponics@example.com">AIdroponics</maintainer>
+  <description>V0.1 water level sensing and auto top-off node for Autoponics.</description>
+  <maintainer email="autoponics@example.com">Autoponics</maintainer>
   <license>MIT</license>
   <exec_depend>rclpy</exec_depend>
   <exec_depend>hydroponics_msgs</exec_depend>

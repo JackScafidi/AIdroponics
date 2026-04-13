@@ -1,5 +1,5 @@
 # MIT License
-# Copyright (c) 2026 AIdroponics Project
+# Copyright (c) 2026 Autoponics Project
 """Unit tests for temporal change tracking logic in plant_vision_node."""
 
 import numpy as np

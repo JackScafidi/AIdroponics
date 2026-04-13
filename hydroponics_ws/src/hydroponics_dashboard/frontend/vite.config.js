@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 import crypto from 'crypto'
 
 // Same salt+hash as the Python backend (auth.py) — password is never stored in plain text
-const AUTH_SALT = 'aidroponics_auth_salt_v1'
+const AUTH_SALT = 'autoponics_auth_salt_v1'
 const PASSWORD_HASH = '0b4a4c945b77c4eb0aa2bc61ffd1b294693484d3a1092fdb886fb0fcf0143126'
 const activeTokens = new Set()
 

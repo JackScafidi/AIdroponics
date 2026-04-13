@@ -1,4 +1,4 @@
-# AIdroponics
+# Autoponics
 
 **Autonomous deep-water-culture hydroponics system** with AI-powered plant health monitoring, explicit-chemistry auto-dosing, dual-camera NDVI vision, and water management — built on ROS2 Humble, running on a Raspberry Pi CM4 with an ESP32 co-processor.
 

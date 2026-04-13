@@ -1,4 +1,4 @@
-# AIdroponics — Scaling Guide
+# Autoponics — Scaling Guide
 
 V0.1 is a **single-plant validation platform** — one DWC container, one probe,
 dual cameras, four peristaltic pumps, one water level sensor. This guide covers

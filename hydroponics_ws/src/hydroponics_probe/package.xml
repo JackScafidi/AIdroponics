@@ -3,8 +3,8 @@
 <package format="3">
   <name>hydroponics_probe</name>
   <version>0.1.0</version>
-  <description>V0.1 probe arm and aeration cycle nodes for AIdroponics single-plant platform.</description>
-  <maintainer email="aidroponics@example.com">AIdroponics</maintainer>
+  <description>V0.1 probe arm and aeration cycle nodes for Autoponics single-plant platform.</description>
+  <maintainer email="autoponics@example.com">Autoponics</maintainer>
   <license>MIT</license>
 
   <exec_depend>rclpy</exec_depend>
